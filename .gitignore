@@ -7,11 +7,13 @@ node_modules/
 *.iml
 @types/
 build/
+dist/
 
 # Test cache
 .cache/
 
-# Yarn
+# Yarn (prefer npm package-lock.json)
+yarn.lock
 .pnp.*
 .yarn/*
 !.yarn/patches
