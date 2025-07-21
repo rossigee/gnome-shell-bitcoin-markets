@@ -4,23 +4,29 @@ export class Api extends BaseProvider.Api {
   apiName = 'Poloniex';
 
   apiDocs = [
-    ['API Docs', 'https://poloniex.com/support/api/'],
-    ['Currencies (JSON)', 'https://poloniex.com/public?command=returnCurrencies'],
+    ['API Docs', 'https://api-docs.poloniex.com/'],
+    ['Market Data', 'https://api-docs.poloniex.com/spot/api/public/market-data'],
   ];
 
-  interval = 10; // 60 requests per 10 minutes
+  interval = 10;
 
   getUrl(_options) {
-    return 'https://poloniex.com/public?command=returnTicker';
+    return 'https://api.poloniex.com/markets/ticker24h';
   }
 
   getLast(data, { base, quote }) {
-    const pair = `${quote}_${base}`;
+    // New API returns array of objects with symbol field
+    const pair = `${base}_${quote}`;
+    const ticker = data.find((item) => item.symbol === pair);
 
-    if (!data[pair]) {
+    if (!ticker) {
       throw new Error(`no data for pair ${pair}`);
     }
 
-    return data[pair].last;
+    return ticker.close;
+  }
+
+  getDefaultTicker() {
+    return { base: 'BTC', quote: 'USDT' };
   }
 }

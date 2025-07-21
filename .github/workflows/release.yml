@@ -1,0 +1,136 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., 1.2.3)'
+        required: true
+        type: string
+      release_type:
+        description: 'Release type'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+
+jobs:
+  create-release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0 # Full history for changelog
+        token: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+    
+    - name: Configure Git
+      run: |
+        git config user.name "GitHub Actions"
+        git config user.email "actions@github.com"
+    
+    - name: Update version in metadata
+      run: |
+        VERSION="${{ inputs.version }}"
+        # Update version in src/metadata.json
+        jq ".version = \"${VERSION}\"" src/metadata.json > tmp.json && mv tmp.json src/metadata.json
+        
+        # Update version in package.json
+        npm version ${VERSION} --no-git-tag-version
+    
+    - name: Generate changelog
+      id: changelog
+      run: |
+        # Get the previous tag
+        PREV_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+        
+        if [ -z "$PREV_TAG" ]; then
+          CHANGELOG=$(git log --pretty=format:"- %s" --no-merges)
+        else
+          CHANGELOG=$(git log ${PREV_TAG}..HEAD --pretty=format:"- %s" --no-merges)
+        fi
+        
+        # Group commits by type
+        echo "## What's Changed" > CHANGELOG.md
+        echo "" >> CHANGELOG.md
+        
+        # Features
+        echo "$CHANGELOG" | grep -E "^- feat:|^- feature:" | sed 's/^- feat: /- /' | sed 's/^- feature: /- /' > features.tmp
+        if [ -s features.tmp ]; then
+          echo "### ✨ Features" >> CHANGELOG.md
+          cat features.tmp >> CHANGELOG.md
+          echo "" >> CHANGELOG.md
+        fi
+        
+        # Fixes
+        echo "$CHANGELOG" | grep -E "^- fix:|^- bugfix:" | sed 's/^- fix: /- /' | sed 's/^- bugfix: /- /' > fixes.tmp
+        if [ -s fixes.tmp ]; then
+          echo "### 🐛 Bug Fixes" >> CHANGELOG.md
+          cat fixes.tmp >> CHANGELOG.md
+          echo "" >> CHANGELOG.md
+        fi
+        
+        # Other changes
+        echo "$CHANGELOG" | grep -vE "^- (feat|feature|fix|bugfix):" > other.tmp
+        if [ -s other.tmp ]; then
+          echo "### 📝 Other Changes" >> CHANGELOG.md
+          cat other.tmp >> CHANGELOG.md
+          echo "" >> CHANGELOG.md
+        fi
+        
+        # Store for release notes
+        {
+          echo 'changelog<<EOF'
+          cat CHANGELOG.md
+          echo EOF
+        } >> $GITHUB_OUTPUT
+        
+        rm -f features.tmp fixes.tmp other.tmp
+    
+    - name: Commit version bump
+      run: |
+        git add src/metadata.json package.json package-lock.json
+        git commit -m "chore: bump version to ${{ inputs.version }}"
+        git push
+    
+    - name: Create and push tag
+      run: |
+        git tag -a "v${{ inputs.version }}" -m "Release v${{ inputs.version }}"
+        git push origin "v${{ inputs.version }}"
+    
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: v${{ inputs.version }}
+        name: v${{ inputs.version }}
+        body: |
+          ${{ steps.changelog.outputs.changelog }}
+          
+          ## Installation
+          
+          ### From GNOME Extensions
+          Visit [GNOME Extensions page](https://extensions.gnome.org/extension/648/bitcoin-markets/) and click "Install"
+          
+          ### Manual Installation
+          ```bash
+          wget https://github.com/${{ github.repository }}/releases/download/v${{ inputs.version }}/gnome-shell-bitcoin-markets.zip
+          gnome-extensions install gnome-shell-bitcoin-markets.zip
+          ```
+          
+          ### Arch Linux (AUR)
+          ```bash
+          yay -S gnome-shell-extension-bitcoin-markets
+          ```
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -7,3 +7,24 @@ node_modules/
 *.iml
 @types/
 build/
+
+# Test cache
+.cache/
+
+# Yarn
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
+yarn-error.log
+
+# Logs
+*.log
+e2e.log
+
+# OS files
+.DS_Store
+Thumbs.db

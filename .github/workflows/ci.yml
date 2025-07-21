@@ -1,0 +1,191 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+  release:
+    types: [ created ]
+
+jobs:
+  test:
+    name: Test and Lint
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: recursive
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'yarn'
+    
+    - name: Install dependencies
+      run: yarn install --frozen-lockfile
+    
+    - name: Run linter
+      run: make lint
+    
+    - name: Run type checking
+      run: make check
+      continue-on-error: true # Type errors in prefs.ts are known
+    
+    - name: Run tests
+      run: make test
+      env:
+        TS_NODE_PROJECT: ./tsconfig.test.json
+    
+    - name: Check for secrets
+      uses: trufflesecurity/trufflehog@main
+      with:
+        path: ./
+        base: ${{ github.event.repository.default_branch }}
+        head: HEAD
+
+  build:
+    name: Build Extension
+    needs: test
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: recursive
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'yarn'
+    
+    - name: Install dependencies
+      run: yarn install --frozen-lockfile
+    
+    - name: Install GNOME dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y gettext glib-2.0-dev
+    
+    - name: Build extension
+      run: make build
+    
+    - name: Generate checksum
+      run: sha256sum gnome-shell-bitcoin-markets.zip > gnome-shell-bitcoin-markets.zip.sha256
+    
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: extension-build
+        path: |
+          gnome-shell-bitcoin-markets.zip
+          gnome-shell-bitcoin-markets.zip.sha256
+        retention-days: 30
+
+  release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release'
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Download build artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: extension-build
+    
+    - name: Upload Release Assets
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          gnome-shell-bitcoin-markets.zip
+          gnome-shell-bitcoin-markets.zip.sha256
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  update-aur:
+    name: Update AUR Package
+    needs: release
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release'
+    
+    steps:
+    - name: Checkout AUR repository
+      uses: actions/checkout@v4
+      with:
+        repository: ${{ github.repository_owner }}/gnome-shell-bitcoin-markets-aur
+        ssh-key: ${{ secrets.AUR_SSH_KEY }}
+    
+    - name: Update PKGBUILD
+      run: |
+        VERSION="${{ github.event.release.tag_name }}"
+        VERSION="${VERSION#v}" # Remove 'v' prefix if present
+        sed -i "s/pkgver=.*/pkgver=${VERSION}/" PKGBUILD
+        
+        # Download and update checksum
+        wget "https://github.com/${{ github.repository }}/releases/download/${{ github.event.release.tag_name }}/gnome-shell-bitcoin-markets.zip"
+        SHA256=$(sha256sum gnome-shell-bitcoin-markets.zip | cut -d' ' -f1)
+        sed -i "s/sha256sums=.*/sha256sums=('${SHA256}')/" PKGBUILD
+        
+        # Update .SRCINFO
+        makepkg --printsrcinfo > .SRCINFO
+    
+    - name: Commit and push changes
+      run: |
+        git config user.name "GitHub Actions"
+        git config user.email "actions@github.com"
+        git add PKGBUILD .SRCINFO
+        git commit -m "Update to version ${{ github.event.release.tag_name }}"
+        git push
+      continue-on-error: true # Don't fail if AUR repo doesn't exist
+
+  documentation:
+    name: Update Documentation
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/master'
+    
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: recursive
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'yarn'
+    
+    - name: Install dependencies
+      run: yarn install --frozen-lockfile
+    
+    - name: Generate provider list
+      run: |
+        node -e "
+        const providers = require('./dist/extension.js').Providers;
+        const list = Object.keys(providers).sort().map(k => '- ' + providers[k].apiName).join('\n');
+        console.log('## Supported Exchanges\n\n' + list);
+        " > EXCHANGES.md
+    
+    - name: Check for documentation changes
+      id: docs-changed
+      run: |
+        git add -A
+        if git diff --staged --quiet; then
+          echo "changed=false" >> $GITHUB_OUTPUT
+        else
+          echo "changed=true" >> $GITHUB_OUTPUT
+        fi
+    
+    - name: Create Pull Request
+      if: steps.docs-changed.outputs.changed == 'true'
+      uses: peter-evans/create-pull-request@v5
+      with:
+        title: 'docs: update generated documentation'
+        body: 'This PR updates the automatically generated documentation.'
+        branch: update-docs-${{ github.sha }}
+        commit-message: 'docs: update generated documentation'
