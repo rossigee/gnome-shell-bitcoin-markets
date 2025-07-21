@@ -22,6 +22,29 @@ export interface Subscriber {
 }
 
 const permanentErrors: Map<BaseProvider.Api, Error> = new Map();
+const permanentErrorTimeouts: Map<BaseProvider.Api, number> = new Map();
+
+// Clear permanent errors after 1 hour
+const PERMANENT_ERROR_TIMEOUT = 60 * 60 * 1000; // 1 hour in milliseconds
+
+function setPermanentError(provider: BaseProvider.Api, error: Error) {
+  permanentErrors.set(provider, error);
+  
+  // Clear any existing timeout for this provider
+  const existingTimeout = permanentErrorTimeouts.get(provider);
+  if (existingTimeout) {
+    Glib.source_remove(existingTimeout);
+  }
+  
+  // Set a new timeout to clear the error
+  const timeoutId = timeoutAdd(PERMANENT_ERROR_TIMEOUT, () => {
+    permanentErrors.delete(provider);
+    permanentErrorTimeouts.delete(provider);
+    console.log(`Cleared permanent error for provider ${provider.apiName} after timeout`);
+  });
+  
+  permanentErrorTimeouts.set(provider, timeoutId);
+}
 
 function filterSubscribers(
   subscribers: Subscriber[],
@@ -196,20 +219,42 @@ class PollLoop {
       throw new Error('Unable to find extension');
     }
 
-    try {
-      const response = await HTTP.getJSON(url, {
-        userAgent: HTTP.getDefaultUserAgent(ext.metadata, Config.PACKAGE_VERSION),
-      });
-      const date = new Date();
-      this.cache.set(url, { date, response });
-      processResponse(response, date);
-    } catch (err: any) {
-      if (HTTP.isErrTooManyRequests(err)) {
-        permanentErrors.set(this.provider, err);
+    // Retry logic with exponential backoff
+    const maxRetries = 3;
+    const baseDelay = 1000; // 1 second
+    
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        const response = await HTTP.getJSON(url, {
+          userAgent: HTTP.getDefaultUserAgent(ext.metadata, Config.PACKAGE_VERSION),
+        });
+        const date = new Date();
+        this.cache.set(url, { date, response });
+        processResponse(response, date);
+        return; // Success, exit retry loop
+      } catch (err: any) {
+        const isLastAttempt = attempt === maxRetries - 1;
+        
+        if (HTTP.isErrTooManyRequests(err)) {
+          setPermanentError(this.provider, err);
+          console.error(err);
+          this.cache.delete(url);
+          applySubscribers(getUrlSubscribers(), (s) => s.onUpdateError(err));
+          return;
+        }
+        
+        if (!isLastAttempt) {
+          // Calculate exponential backoff delay
+          const delay = baseDelay * Math.pow(2, attempt);
+          console.log(`Request failed, retrying in ${delay}ms... (attempt ${attempt + 1}/${maxRetries})`);
+          await new Promise(resolve => timeoutAdd(delay, () => resolve(undefined)));
+        } else {
+          // Final attempt failed
+          console.error(err);
+          this.cache.delete(url);
+          applySubscribers(getUrlSubscribers(), (s) => s.onUpdateError(err));
+        }
       }
-      console.error(err);
-      this.cache.delete(url);
-      applySubscribers(getUrlSubscribers(), (s) => s.onUpdateError(err));
     }
   }
 

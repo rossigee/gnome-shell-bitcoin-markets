@@ -18,7 +18,6 @@ import * as ProviderCexio from './ProviderCexio';
 import * as ProviderCoinbase from './ProviderCoinbase';
 import * as ProviderCoinGecko from './ProviderCoinGecko';
 import * as ProviderCryptoCompare from './ProviderCryptoCompare';
-import * as ProviderFtx from './ProviderFtx';
 import * as ProviderGate from './ProviderGate';
 import * as ProviderHitBTC from './ProviderHitBTC';
 import * as ProviderHuobi from './ProviderHuobi';
@@ -27,7 +26,7 @@ import * as ProviderKucoin from './ProviderKucoin';
 import * as ProviderMEXC from './ProviderMEXC';
 import * as ProviderNobitex from './ProviderNobitex';
 import * as ProviderPaymium from './ProviderPaymium';
-import * as ProviderPoloniex from './ProviderBitPay';
+import * as ProviderPoloniex from './ProviderPoloniex';
 import * as ProviderTomoX from './ProviderTomoX';
 import * as ProviderVccExchange from './ProviderVccExchange';
 import * as ProviderBybit from './ProviderBybit';
@@ -52,7 +51,6 @@ export const Providers: Record<string, BaseProvider.Api> = {
   coinbase: new ProviderCoinbase.Api(),
   coingecko: new ProviderCoinGecko.Api(),
   cryptocompare: new ProviderCryptoCompare.Api(),
-  ftx: new ProviderFtx.Api(),
   gate: new ProviderGate.Api(),
   hitbtc: new ProviderHitBTC.Api(),
   huobi: new ProviderHuobi.Api(),
