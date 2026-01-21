@@ -4,8 +4,7 @@ Please contact me at otto.allmendinger@gmail.com if you want to maintain this ex
 
 # gnome-shell-bitcoin-markets
 
-
-![Screenshot](https://github.com/OttoAllmendinger/gnome-shell-bitcoin-markets/blob/master/data/screenshot.png?raw=true)
+![Screenshot](https://github.com/rossigee/gnome-shell-bitcoin-markets/blob/master/data/screenshot.png?raw=true)
 
 Displays Bitcoin and Altcoin market information in the Gnome Shell.
 
@@ -52,7 +51,7 @@ https://extensions.gnome.org/extension/648/bitcoin-markets/
 
 The latest development version can be installed manually with these commands
 
-        git clone https://github.com/OttoAllmendinger/gnome-shell-bitcoin-markets.git
+        git clone https://github.com/rossigee/gnome-shell-bitcoin-markets.git
         cd gnome-shell-bitcoin-markets
         make
         make install
@@ -73,16 +72,16 @@ gnome-tweak-tool.
 ### Value options
 
 | option         | result                                  |
-|----------------|-----------------------------------------|
+| -------------- | --------------------------------------- | ------ | --------------------- |
 | v              | value                                   |
 | mv             | value divided by 1000                   |
 | kv             | value multiplied by 1000                |
 | satv           | value multiplied by 1e8                 |
-| (m\            | k\                                      |sat)v0 | value with 0 decimals                   |
-| (m\            | k\                                      |sat)v1 | value with 1 decimals                   |
-| (m\            | k\                                      |sat)v2 | value with 2 decimals                   |
+| (m\            | k\                                      | sat)v0 | value with 0 decimals |
+| (m\            | k\                                      | sat)v1 | value with 1 decimals |
+| (m\            | k\                                      | sat)v2 | value with 2 decimals |
 | ...            | ...                                     |
-| (m\            | k\                                      |sat)v8 | value with 8 decimals                   |
+| (m\            | k\                                      | sat)v8 | value with 8 decimals |
 | raw            | raw value without additional formatting |
 | moscow         | moscow time                             |
 | moscow!segment | moscow time as segment characters       |

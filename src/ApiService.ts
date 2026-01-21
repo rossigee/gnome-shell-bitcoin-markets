@@ -14,14 +14,131 @@ interface PriceData {
 export interface Subscriber {
   options: BaseProvider.Options;
 
-  onUpdateStart();
+  onUpdateStart(): void;
 
-  onUpdateError(err: Error, opts?: { ticker: BaseProvider.Ticker });
+  onUpdateError(err: Error, opts?: { ticker: BaseProvider.Ticker }): void;
 
-  onUpdatePriceData(priceData: PriceData[]);
+  onUpdatePriceData(priceData: PriceData[]): void;
+}
+
+const ERROR_MESSAGES = {
+  NETWORK_ERROR: 'Unable to connect to exchange. Check your internet connection.',
+  RATE_LIMITED: 'Exchange rate limit exceeded. Data will update automatically.',
+  INVALID_RESPONSE: 'Exchange returned invalid data. This may be temporary.',
+  PROVIDER_DISABLED: 'Provider is temporarily disabled due to repeated failures.',
+  UNKNOWN_ERROR: 'An unexpected error occurred while fetching price data.',
+} as const;
+
+function createContextualError(
+  originalError: Error,
+  context: { url?: string; ticker?: BaseProvider.Ticker; provider?: BaseProvider.Api },
+): Error {
+  const error = new Error();
+
+  // Determine error type and message
+  if (HTTP.isErrTooManyRequests(originalError as any)) {
+    error.message = ERROR_MESSAGES.RATE_LIMITED;
+  } else if (originalError.message.includes('fetch')) {
+    error.message = ERROR_MESSAGES.NETWORK_ERROR;
+  } else if (originalError.message.includes('JSON') || originalError.message.includes('parse')) {
+    error.message = ERROR_MESSAGES.INVALID_RESPONSE;
+  } else {
+    error.message = ERROR_MESSAGES.UNKNOWN_ERROR;
+  }
+
+  // Add context information
+  const contextParts: string[] = [];
+  if (context.provider) {
+    contextParts.push(`Provider: ${context.provider.apiName}`);
+  }
+  if (context.ticker) {
+    contextParts.push(`Pair: ${context.ticker.base}/${context.ticker.quote}`);
+  }
+  if (context.url) {
+    contextParts.push(`URL: ${context.url}`);
+  }
+
+  if (contextParts.length > 0) {
+    error.message += ` (${contextParts.join(', ')})`;
+  }
+
+  // Preserve original error for debugging
+  (error as any).originalError = originalError;
+
+  return error;
+}
+
+class CircuitBreaker {
+  private failures = 0;
+  private lastFailureTime = 0;
+  private state: 'CLOSED' | 'OPEN' | 'HALF_OPEN' = 'CLOSED';
+  private readonly failureThreshold = 5;
+  private readonly recoveryTimeout = 60000; // 1 minute
+
+  isOpen(): boolean {
+    if (this.state === 'OPEN') {
+      // Check if we should transition to HALF_OPEN
+      if (Date.now() - this.lastFailureTime > this.recoveryTimeout) {
+        this.state = 'HALF_OPEN';
+        return false;
+      }
+      return true;
+    }
+    return false;
+  }
+
+  recordSuccess(): void {
+    this.failures = 0;
+    this.state = 'CLOSED';
+  }
+
+  recordFailure(): void {
+    this.failures++;
+    this.lastFailureTime = Date.now();
+
+    if (this.failures >= this.failureThreshold) {
+      this.state = 'OPEN';
+      console.log(`Circuit breaker opened after ${this.failures} failures`);
+    }
+  }
+
+  getState(): string {
+    return this.state;
+  }
 }
 
 const permanentErrors: Map<BaseProvider.Api, Error> = new Map();
+const permanentErrorTimeouts: Map<BaseProvider.Api, number> = new Map();
+const circuitBreakers: Map<BaseProvider.Api, CircuitBreaker> = new Map();
+
+// Clear permanent errors after 1 hour
+const PERMANENT_ERROR_TIMEOUT = 60 * 60 * 1000; // 1 hour in milliseconds
+
+function getCircuitBreaker(provider: BaseProvider.Api): CircuitBreaker {
+  if (!circuitBreakers.has(provider)) {
+    circuitBreakers.set(provider, new CircuitBreaker());
+  }
+  return circuitBreakers.get(provider)!;
+}
+
+function setPermanentError(provider: BaseProvider.Api, error: Error) {
+  permanentErrors.set(provider, error);
+
+  // Clear any existing timeout for this provider
+  const existingTimeout = permanentErrorTimeouts.get(provider);
+  if (existingTimeout) {
+    Glib.source_remove(existingTimeout);
+  }
+
+  // Set a new timeout to clear the error
+  const timeoutId = timeoutAdd(PERMANENT_ERROR_TIMEOUT, () => {
+    permanentErrors.delete(provider);
+    permanentErrorTimeouts.delete(provider);
+    console.log(`Cleared permanent error for provider ${provider.apiName} after timeout`);
+  });
+
+  permanentErrorTimeouts.set(provider, timeoutId);
+}
 
 function filterSubscribers(
   subscribers: Subscriber[],
@@ -52,7 +169,7 @@ function filterSubscribers(
   });
 }
 
-const applySubscribers = (subscribers, func: (s: Subscriber) => void) =>
+const applySubscribers = (subscribers: Subscriber[], func: (s: Subscriber) => void) =>
   subscribers.forEach((s) => {
     try {
       func(s);
@@ -73,14 +190,14 @@ class PriceDataLog {
 
   maxHistory = 10;
 
-  get(ticker): Map<Date, number> {
+  get(ticker: BaseProvider.Ticker): Map<Date, number> {
     if (!this.map.has(ticker)) {
       this.map.set(ticker, new Map());
     }
     return this.map.get(ticker)!;
   }
 
-  addValue(ticker, date, value): PriceData[] {
+  addValue(ticker: BaseProvider.Ticker, date: Date, value: number): PriceData[] {
     if (isNaN(value)) {
       throw new Error(`invalid price value ${value}`);
     }
@@ -116,7 +233,7 @@ class PollLoop {
     this.provider = provider;
   }
 
-  start() {
+  start(): boolean {
     if (this.signal === null) {
       this.signal = Glib.idle_add(Glib.PRIORITY_DEFAULT, () => {
         this.run();
@@ -124,6 +241,7 @@ class PollLoop {
       });
       return true;
     }
+    return false;
   }
 
   stop() {
@@ -160,27 +278,27 @@ class PollLoop {
     this.urls.forEach((url) => this.updateUrl(url, this.cache.get(url)));
   }
 
-  async updateUrl(url, cache?) {
+  async updateUrl(url: string, cache?: { date: Date; data: any }) {
     const getUrlSubscribers = () => filterSubscribers(this.subscribers, { url });
 
     const tickers: Set<BaseProvider.Ticker> = new Set(getUrlSubscribers().map(getSubscriberTicker));
 
-    const processResponse = (response, date) => {
+    const processResponse = (response: any, date: Date) => {
       tickers.forEach((ticker) => {
         const tickerSubscribers = filterSubscribers(getUrlSubscribers(), { ticker });
         try {
           const priceData = this.priceDataLog.addValue(ticker, date, this.provider.parseData(response, ticker));
           applySubscribers(tickerSubscribers, (s) => s.onUpdatePriceData(priceData));
         } catch (e: any) {
-          e.message = `Error updating ${url}: ${e.message}`;
-          applySubscribers(tickerSubscribers, (s) => s.onUpdateError(e, { ticker }));
-          console.log(e);
+          const contextualError = createContextualError(e, { url, ticker, provider: this.provider });
+          applySubscribers(tickerSubscribers, (s) => s.onUpdateError(contextualError, { ticker }));
+          console.log(contextualError);
         }
       });
     };
 
     if (cache) {
-      return processResponse(cache.response, cache.date);
+      return processResponse(cache.data, cache.date);
     }
 
     applySubscribers(getUrlSubscribers(), (s) => s.onUpdateStart());
@@ -191,25 +309,59 @@ class PollLoop {
       return;
     }
 
+    // Check circuit breaker
+    const circuitBreaker = getCircuitBreaker(this.provider);
+    if (circuitBreaker.isOpen()) {
+      const circuitError = new Error(ERROR_MESSAGES.PROVIDER_DISABLED);
+      (circuitError as any).originalError = new Error(`Circuit breaker is OPEN for provider ${this.provider.apiName}`);
+      applySubscribers(getUrlSubscribers(), (s) => s.onUpdateError(circuitError));
+      return;
+    }
+
     const ext = Extension.lookupByURL(import.meta.url);
     if (!ext) {
       throw new Error('Unable to find extension');
     }
 
-    try {
-      const response = await HTTP.getJSON(url, {
-        userAgent: HTTP.getDefaultUserAgent(ext.metadata, Config.PACKAGE_VERSION),
-      });
-      const date = new Date();
-      this.cache.set(url, { date, response });
-      processResponse(response, date);
-    } catch (err: any) {
-      if (HTTP.isErrTooManyRequests(err)) {
-        permanentErrors.set(this.provider, err);
+    // Retry logic with exponential backoff
+    const maxRetries = 3;
+    const baseDelay = 1000; // 1 second
+
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        const response = await HTTP.getJSON(url, {
+          userAgent: HTTP.getDefaultUserAgent(ext.metadata, Config.PACKAGE_VERSION),
+        });
+        const date = new Date();
+        this.cache.set(url, { date, response });
+        processResponse(response, date);
+        circuitBreaker.recordSuccess(); // Record successful request
+        return; // Success, exit retry loop
+      } catch (err: any) {
+        const isLastAttempt = attempt === maxRetries - 1;
+
+        if (HTTP.isErrTooManyRequests(err)) {
+          setPermanentError(this.provider, err);
+          console.error(err);
+          this.cache.delete(url);
+          applySubscribers(getUrlSubscribers(), (s) => s.onUpdateError(err));
+          return;
+        }
+
+        if (!isLastAttempt) {
+          // Calculate exponential backoff delay
+          const delay = baseDelay * Math.pow(2, attempt);
+          console.log(`Request failed, retrying in ${delay}ms... (attempt ${attempt + 1}/${maxRetries})`);
+          await new Promise((resolve) => timeoutAdd(delay, () => resolve(undefined)));
+        } else {
+          // Final attempt failed
+          circuitBreaker.recordFailure(); // Record failed request
+          const contextualError = createContextualError(err, { url, provider: this.provider });
+          console.error(contextualError);
+          this.cache.delete(url);
+          applySubscribers(getUrlSubscribers(), (s) => s.onUpdateError(contextualError));
+        }
       }
-      console.error(err);
-      this.cache.delete(url);
-      applySubscribers(getUrlSubscribers(), (s) => s.onUpdateError(err));
     }
   }
 

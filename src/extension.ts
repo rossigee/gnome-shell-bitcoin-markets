@@ -99,7 +99,9 @@ class MarketIndicatorView extends PanelMenu.Button {
     this._popupItemSettings = new PopupMenu.PopupMenuItem('Settings');
     this.menu.addMenuItem(this._popupItemSettings);
     this._popupItemSettings.connect('activate', () => {
-      this.ext.openPreferences();
+      this.ext.openPreferences().catch((err) => {
+        console.error('Failed to open preferences:', err);
+      });
     });
   }
 

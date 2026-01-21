@@ -4,7 +4,7 @@ import Glib from '@girs/glib-2.0';
 import { ExtensionMetadata } from '@gnome-shell/extensions/extension';
 
 function _promisify(cls: any, function_name: string) {
-  Gio._promisify(cls, function_name, (undefined as unknown) as string);
+  Gio._promisify(cls, function_name, undefined as unknown as string);
 }
 
 _promisify(Soup.Session.prototype, 'send_and_read_async');
@@ -15,7 +15,7 @@ _promisify(Gio.Subprocess.prototype, 'wait_check_async');
 const STATUS_TOO_MANY_REQUESTS = 429;
 
 export class HTTPError extends Error {
-  constructor(public message: string, public soupMessage: Soup.Message) {
+  constructor(public override message: string, public soupMessage: Soup.Message) {
     super(message);
     this.soupMessage = soupMessage;
   }
@@ -30,7 +30,7 @@ export class HTTPError extends Error {
     ].join(sep);
   }
 
-  toString(): string {
+  override toString(): string {
     return this.format();
   }
 }
@@ -54,7 +54,7 @@ function getExtensionVersion(metadata: ExtensionMetadata & Record<string, unknow
 }
 
 export function getDefaultUserAgent(metadata: ExtensionMetadata, gnomeVersion: string): string {
-  const repository = 'http://github.com/OttoAllmendinger/gnome-shell-bitcoin-markets';
+  const repository = 'http://github.com/rossigee/gnome-shell-bitcoin-markets';
   const version = getExtensionVersion(metadata as ExtensionMetadata & Record<string, unknown>);
   return `gnome-shell-bitcoin-markets/${version}/Gnome${gnomeVersion} (${repository})`;
 }

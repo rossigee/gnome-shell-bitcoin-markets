@@ -1,8 +1,8 @@
 {
-  "shell-version": ["46", "47", "48"],
+  "shell-version": ["46", "47", "48", "49"],
   "uuid": "bitcoin-markets@ottoallmendinger.github.com",
   "name": "Bitcoin Markets",
-  "url": "https://github.com/OttoAllmendinger/gnome-shell-bitcoin-markets/",
+  "url": "https://github.com/rossigee/gnome-shell-bitcoin-markets/",
   "description": "Display info on various crypto-currency exchanges.",
   "settings-schema": "org.gnome.shell.extensions.bitcoin-markets",
   "gettext-domain": "gnome-shell-bitcoin-markets",
