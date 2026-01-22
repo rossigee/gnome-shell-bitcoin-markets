@@ -311,9 +311,11 @@ export default class BitcoinMarketsSettings extends ExtensionPreferences {
     const page = new Adw.PreferencesPage();
     const gtkWidget = new BitcoinMarketsSettingsWidget(this);
 
-    // In GNOME 49, Adw.PreferencesGroup only accepts Adw.PreferencesRow children
-    // So we add the Gtk.Box directly to the page instead
-    page.add(gtkWidget);
+    // In GNOME 49+, PreferencesPage.add() expects an AdwPreferencesGroup
+    // We need to wrap our Gtk.Box in a proper container
+    const group = new Adw.PreferencesGroup();
+    group.add(gtkWidget);
+    page.add(group);
 
     window.add(page);
   }
