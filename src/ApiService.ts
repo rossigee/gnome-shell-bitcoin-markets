@@ -21,7 +21,7 @@ export interface Subscriber {
   onUpdatePriceData(priceData: PriceData[]): void;
 }
 
-const ERROR_MESSAGES = {
+export const ERROR_MESSAGES = {
   NETWORK_ERROR: 'Unable to connect to exchange. Check your internet connection.',
   RATE_LIMITED: 'Exchange rate limit exceeded. Data will update automatically.',
   INVALID_RESPONSE: 'Exchange returned invalid data. This may be temporary.',
@@ -29,7 +29,7 @@ const ERROR_MESSAGES = {
   UNKNOWN_ERROR: 'An unexpected error occurred while fetching price data.',
 } as const;
 
-function createContextualError(
+export function createContextualError(
   originalError: Error,
   context: { url?: string; ticker?: BaseProvider.Ticker; provider?: BaseProvider.Api },
 ): Error {
@@ -68,7 +68,7 @@ function createContextualError(
   return error;
 }
 
-class CircuitBreaker {
+export class CircuitBreaker {
   private failures = 0;
   private lastFailureTime = 0;
   private state: 'CLOSED' | 'OPEN' | 'HALF_OPEN' = 'CLOSED';
@@ -112,7 +112,7 @@ const permanentErrorTimeouts: Map<BaseProvider.Api, number> = new Map();
 const circuitBreakers: Map<BaseProvider.Api, CircuitBreaker> = new Map();
 
 // Clear permanent errors after 1 hour
-const PERMANENT_ERROR_TIMEOUT = 60 * 60 * 1000; // 1 hour in milliseconds
+export const PERMANENT_ERROR_TIMEOUT = 60 * 60 * 1000; // 1 hour in milliseconds
 
 function getCircuitBreaker(provider: BaseProvider.Api): CircuitBreaker {
   if (!circuitBreakers.has(provider)) {
