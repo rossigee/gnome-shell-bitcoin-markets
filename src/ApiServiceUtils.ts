@@ -1,3 +1,10 @@
+// Helper to detect rate limit errors - supports both HTTPError (soupMessage.status_code) and generic errors
+function isErrorTooManyRequests(err: Error): boolean {
+  return !!(
+    (err as any).soupMessage?.status_code === 429 || err.message.includes('429')
+  );
+}
+
 export const ERROR_MESSAGES = {
   NETWORK_ERROR: 'Unable to connect to exchange. Check your internet connection.',
   RATE_LIMITED: 'Exchange rate limit exceeded. Data will update automatically.',
@@ -14,8 +21,7 @@ export function createContextualError(
 
   // Determine error type and message
   // Check for rate limit (429) - supports both HTTPError (soupMessage.status_code) and test/generic errors
-  const isRateLimit =
-    (originalError as any).soupMessage?.status_code === 429 || originalError.message.includes('429');
+  const isRateLimit = isErrorTooManyRequests(originalError);
 
   if (isRateLimit) {
     error.message = ERROR_MESSAGES.RATE_LIMITED;
