@@ -8,7 +8,7 @@ export class Api extends BaseProvider.Api {
   interval = 15;
 
   getUrl({ base, quote }) {
-    return `https://api.nobitex.ir/v2/orderbook/${base}${quote}`;
+    return `https://apiv2.nobitex.ir/v3/orderbook/${base}${quote}`;
   }
 
   getLast({ lastTradePrice }, { quote }) {
