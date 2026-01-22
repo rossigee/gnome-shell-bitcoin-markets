@@ -1,4 +1,5 @@
 import * as BaseProvider from './BaseProvider';
+import { DefaultTickers } from '../defaults';
 
 export class Api extends BaseProvider.Api {
   apiName = 'Coinbase';
@@ -7,20 +8,23 @@ export class Api extends BaseProvider.Api {
 
   interval = 60; // unclear, should be safe
 
-  getUrl({ base }) {
-    base = base.toUpperCase();
-    return `https://api.coinbase.com/v2/exchange-rates?currency=${base}`;
+  getUrl({ base }: BaseProvider.Ticker): string {
+    return `https://api.coinbase.com/v2/exchange-rates?currency=${base.toUpperCase()}`;
   }
 
-  getLast(data, { quote }) {
+  getLast(data: any, { quote }: BaseProvider.Ticker): number {
     const { rates } = data.data;
     if (!rates) {
       throw new Error('invalid response');
     }
-    quote = quote.toUpperCase();
-    if (!(quote in rates)) {
-      throw new Error(`no data for quote ${quote}`);
+    const upperQuote = quote.toUpperCase();
+    if (!(upperQuote in rates)) {
+      BaseProvider.throwNoData('quote', quote);
     }
-    return rates[quote];
+    return rates[upperQuote];
+  }
+
+  getDefaultTicker(): BaseProvider.Ticker {
+    return DefaultTickers.BTC_USD;
   }
 }

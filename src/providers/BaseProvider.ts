@@ -1,3 +1,22 @@
+/**
+ * Common provider utility functions to reduce code duplication
+ */
+
+// Helper to throw "no data for X" errors
+export function throwNoData(field: string, value: string): never {
+  throw new Error(`no data for ${field} ${value}`);
+}
+
+// Helper to extract error message from various response formats
+export function throwApiError(errorValue: string | undefined): never {
+  throw new Error(errorValue || 'unknown error');
+}
+
+// Helper for case conversion commonly used in symbol formatting
+export function formatSymbol(base: string, quote: string): string {
+  return `${base}${quote}`.toUpperCase();
+}
+
 export interface Ticker {
   base: string;
   quote: string;
