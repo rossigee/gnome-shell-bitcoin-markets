@@ -1,7 +1,3 @@
-# Maintainers needed
-
-Please contact me at otto.allmendinger@gmail.com if you want to maintain this extension
-
 # gnome-shell-bitcoin-markets
 
 ![Screenshot](https://github.com/rossigee/gnome-shell-bitcoin-markets/blob/master/data/screenshot.png?raw=true)
