@@ -67,20 +67,30 @@ gnome-tweak-tool.
 
 ### Value options
 
-| option         | result                                  |
-| -------------- | --------------------------------------- | ------ | --------------------- |
-| v              | value                                   |
-| mv             | value divided by 1000                   |
-| kv             | value multiplied by 1000                |
-| satv           | value multiplied by 1e8                 |
-| (m\            | k\                                      | sat)v0 | value with 0 decimals |
-| (m\            | k\                                      | sat)v1 | value with 1 decimals |
-| (m\            | k\                                      | sat)v2 | value with 2 decimals |
-| ...            | ...                                     |
-| (m\            | k\                                      | sat)v8 | value with 8 decimals |
-| raw            | raw value without additional formatting |
-| moscow         | moscow time                             |
-| moscow!segment | moscow time as segment characters       |
+| option         | result                                   |
+| -------------- | ---------------------------------------- |
+| v              | value                                    |
+| mv             | value divided by 1000                    |
+| kv             | value multiplied by 1000                 |
+| satv           | value multiplied by 1e8                  |
+| mv0            | value divided by 1000 with 0 decimals    |
+| mv1            | value divided by 1000 with 1 decimal     |
+| mv2            | value divided by 1000 with 2 decimals    |
+| ...            | ...                                      |
+| mv8            | value divided by 1000 with 8 decimals    |
+| kv0            | value multiplied by 1000 with 0 decimals |
+| kv1            | value multiplied by 1000 with 1 decimal  |
+| kv2            | value multiplied by 1000 with 2 decimals |
+| ...            | ...                                      |
+| kv8            | value multiplied by 1000 with 8 decimals |
+| satv0          | value multiplied by 1e8 with 0 decimals  |
+| satv1          | value multiplied by 1e8 with 1 decimal   |
+| satv2          | value multiplied by 1e8 with 2 decimals  |
+| ...            | ...                                      |
+| satv8          | value multiplied by 1e8 with 8 decimals  |
+| raw            | raw value without additional formatting  |
+| moscow         | moscow time                              |
+| moscow!segment | moscow time as segment characters        |
 
 ### Quote options
 
