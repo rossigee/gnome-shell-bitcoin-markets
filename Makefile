@@ -3,10 +3,10 @@ UUID = bitcoin-markets@ottoallmendinger.github.com
 SCHEMA = org.gnome.shell.extensions.bitcoin-markets.gschema.xml
 LANGUAGES = de es pt_BR
 
-all: update_dependencies
-	make archive
+all: archive
 
-update_dependencies:
-	git submodule update --init
+.PHONY: test
+test:
+	npm test
 
--include gselib/make/gnome-shell-extension.mk
+-include scripts/make/gnome-shell-extension.mk
