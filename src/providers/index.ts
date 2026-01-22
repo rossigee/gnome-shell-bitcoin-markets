@@ -27,7 +27,7 @@ import * as ProviderKucoin from './ProviderKucoin';
 import * as ProviderMEXC from './ProviderMEXC';
 import * as ProviderNobitex from './ProviderNobitex';
 import * as ProviderPaymium from './ProviderPaymium';
-import * as ProviderPoloniex from './ProviderBitPay';
+import * as ProviderPoloniex from './ProviderPoloniex';
 import * as ProviderTomoX from './ProviderTomoX';
 import * as ProviderVccExchange from './ProviderVccExchange';
 import * as ProviderBybit from './ProviderBybit';

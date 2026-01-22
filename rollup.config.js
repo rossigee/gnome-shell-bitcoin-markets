@@ -1,4 +1,4 @@
-import { targetShell, targetShellExt, buildPath } from './gselib/rollup/rollup.base';
+import { targetShell, targetShellExt, buildPath } from './scripts/rollup/rollup.base';
 
 const targetExt = targetShell({
   input: 'src/extension.ts',
