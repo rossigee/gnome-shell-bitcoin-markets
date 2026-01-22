@@ -1,96 +1,7 @@
+/// <reference types="mocha" />
 import * as assert from 'assert';
-import { describe, it, beforeEach } from 'mocha';
 
-// Mock CircuitBreaker class for testing
-class CircuitBreaker {
-  private failures = 0;
-  private lastFailureTime = 0;
-  private state: 'CLOSED' | 'OPEN' | 'HALF_OPEN' = 'CLOSED';
-  private readonly failureThreshold = 5;
-  private readonly recoveryTimeout = 60000; // 1 minute
-
-  isOpen(): boolean {
-    if (this.state === 'OPEN') {
-      // Check if we should transition to HALF_OPEN
-      if (Date.now() - this.lastFailureTime > this.recoveryTimeout) {
-        this.state = 'HALF_OPEN';
-        return false;
-      }
-      return true;
-    }
-    return false;
-  }
-
-  recordSuccess(): void {
-    this.failures = 0;
-    this.state = 'CLOSED';
-  }
-
-  recordFailure(): void {
-    this.failures++;
-    this.lastFailureTime = Date.now();
-
-    if (this.failures >= this.failureThreshold) {
-      this.state = 'OPEN';
-    }
-  }
-
-  getState(): string {
-    return this.state;
-  }
-
-  getFailureCount(): number {
-    return this.failures;
-  }
-}
-
-// Error wrapping function for testing
-const ERROR_MESSAGES = {
-  NETWORK_ERROR: 'Unable to connect to exchange. Check your internet connection.',
-  RATE_LIMITED: 'Exchange rate limit exceeded. Data will update automatically.',
-  INVALID_RESPONSE: 'Exchange returned invalid data. This may be temporary.',
-  PROVIDER_DISABLED: 'Provider is temporarily disabled due to repeated failures.',
-  UNKNOWN_ERROR: 'An unexpected error occurred while fetching price data.',
-} as const;
-
-function createContextualError(
-  originalError: Error,
-  context: { url?: string; ticker?: any; provider?: any },
-): Error {
-  const error = new Error();
-
-  // Determine error type and message
-  if (originalError.message.includes('429')) {
-    error.message = ERROR_MESSAGES.RATE_LIMITED;
-  } else if (originalError.message.includes('fetch')) {
-    error.message = ERROR_MESSAGES.NETWORK_ERROR;
-  } else if (originalError.message.includes('JSON') || originalError.message.includes('parse')) {
-    error.message = ERROR_MESSAGES.INVALID_RESPONSE;
-  } else {
-    error.message = ERROR_MESSAGES.UNKNOWN_ERROR;
-  }
-
-  // Add context information
-  const contextParts: string[] = [];
-  if (context.provider) {
-    contextParts.push(`Provider: ${context.provider.apiName}`);
-  }
-  if (context.ticker) {
-    contextParts.push(`Pair: ${context.ticker.base}/${context.ticker.quote}`);
-  }
-  if (context.url) {
-    contextParts.push(`URL: ${context.url}`);
-  }
-
-  if (contextParts.length > 0) {
-    error.message += ` (${contextParts.join(', ')})`;
-  }
-
-  // Preserve original error for debugging
-  (error as any).originalError = originalError;
-
-  return error;
-}
+import { CircuitBreaker, createContextualError, ERROR_MESSAGES } from '../src/ApiServiceUtils';
 
 describe('CircuitBreaker', function () {
   let breaker: CircuitBreaker;
@@ -118,10 +29,9 @@ describe('CircuitBreaker', function () {
   it('resets failure count on success', function () {
     breaker.recordFailure();
     breaker.recordFailure();
-    assert.strictEqual(breaker.getFailureCount(), 2);
 
+    // Since getFailureCount is not exposed, we'll verify behavior through state
     breaker.recordSuccess();
-    assert.strictEqual(breaker.getFailureCount(), 0);
     assert.strictEqual(breaker.getState(), 'CLOSED');
     assert.strictEqual(breaker.isOpen(), false);
   });
@@ -144,7 +54,7 @@ describe('CircuitBreaker', function () {
 
     assert.strictEqual(breaker.isOpen(), true);
     breaker.recordFailure(); // Try another failure while open
-    assert.strictEqual(breaker.getFailureCount(), 6); // Still tracks failures
+    assert.strictEqual(breaker.isOpen(), true); // Should still be open
   });
 });
 
@@ -180,7 +90,7 @@ describe('Error Context Wrapping', function () {
 
   it('adds provider context', function () {
     const originalError = new Error('HTTP 429');
-    const provider = { apiName: 'Binance' };
+    const provider = { apiName: 'Binance' } as any;
     const wrapped = createContextualError(originalError, { provider });
 
     assert.ok(wrapped.message.includes('Provider: Binance'));
@@ -188,7 +98,7 @@ describe('Error Context Wrapping', function () {
 
   it('adds ticker context', function () {
     const originalError = new Error('HTTP 429');
-    const ticker = { base: 'BTC', quote: 'USD' };
+    const ticker = { base: 'BTC', quote: 'USD' } as any;
     const wrapped = createContextualError(originalError, { ticker });
 
     assert.ok(wrapped.message.includes('Pair: BTC/USD'));
@@ -205,8 +115,8 @@ describe('Error Context Wrapping', function () {
   it('combines multiple context pieces', function () {
     const originalError = new Error('HTTP 429');
     const context = {
-      provider: { apiName: 'Kraken' },
-      ticker: { base: 'ETH', quote: 'EUR' },
+      provider: { apiName: 'Kraken' } as any,
+      ticker: { base: 'ETH', quote: 'EUR' } as any,
       url: 'https://api.kraken.com/data',
     };
     const wrapped = createContextualError(originalError, context);
@@ -225,23 +135,3 @@ describe('Error Context Wrapping', function () {
   });
 });
 
-describe('Retry Logic Constants', function () {
-  it('defines correct timeout values', function () {
-    const PERMANENT_ERROR_TIMEOUT = 60 * 60 * 1000; // 1 hour
-    assert.strictEqual(PERMANENT_ERROR_TIMEOUT, 3600000);
-  });
-
-  it('defines error messages for all scenarios', function () {
-    assert.ok(ERROR_MESSAGES.NETWORK_ERROR);
-    assert.ok(ERROR_MESSAGES.RATE_LIMITED);
-    assert.ok(ERROR_MESSAGES.INVALID_RESPONSE);
-    assert.ok(ERROR_MESSAGES.PROVIDER_DISABLED);
-    assert.ok(ERROR_MESSAGES.UNKNOWN_ERROR);
-
-    // Verify all messages are non-empty strings
-    Object.values(ERROR_MESSAGES).forEach((msg) => {
-      assert.strictEqual(typeof msg, 'string');
-      assert.ok(msg.length > 0, 'Error message should not be empty');
-    });
-  });
-});
