@@ -15,6 +15,7 @@
     "allowSyntheticDefaultImports": true,
     "skipLibCheck": true,
     "experimentalDecorators": true,
+    "importHelpers": true,
     "allowImportingTsExtensions": true,
     "paths": {
       "@gnome-shell/misc/animationUtils": ["./types/misc/animationUtils/index.d.ts"],
