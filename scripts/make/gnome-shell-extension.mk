@@ -30,7 +30,7 @@ node_modules:
 .PHONY: archive
 archive: $(ZIPFILE)
 
-$(ZIPFILE): res/metadata.json schemas
+$(ZIPFILE): dist/ res/metadata.json schemas
 	-rm $(ZIPFILE)
 	cd dist/ && zip ../$(ZIPFILE) *.js
 	cd res && zip ../$(ZIPFILE) \
