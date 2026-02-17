@@ -1,4 +1,5 @@
 import * as BaseProvider from './BaseProvider';
+import { ProviderIntervals } from '../defaults';
 
 export class Api extends BaseProvider.Api {
   apiName = 'Kraken';
@@ -8,23 +9,24 @@ export class Api extends BaseProvider.Api {
     ['Asset Pairs (JSON)', 'https://api.kraken.com/0/public/AssetPairs'],
   ];
 
-  interval = 10; // unknown, guessing
+  interval = ProviderIntervals.STANDARD;
 
-  getUrl({ base, quote }) {
-    return `https://api.kraken.com/0/public/Ticker?pair=${base}${quote}`;
+  getUrl({ base, quote }: BaseProvider.Ticker): string {
+    return `https://api.kraken.com/0/public/Ticker?pair=${BaseProvider.formatSymbol(base, quote)}`;
   }
 
-  getLast({ result, error }, { base, quote }) {
+  getLast(data: any, { base, quote }: BaseProvider.Ticker): number {
+    const { result, error } = data;
     if (error && error.length) {
-      throw new Error(error[0]);
+      BaseProvider.throwApiError(error[0]);
     }
 
-    const pair = `${base}${quote}`;
+    const pair = BaseProvider.formatSymbol(base, quote);
     if (pair in result) {
       return result[pair].c[0];
     }
 
-    throw new Error(`no data for pair ${pair}`);
+    BaseProvider.throwNoData('pair', pair);
   }
 
   getDefaultTicker(): BaseProvider.Ticker {

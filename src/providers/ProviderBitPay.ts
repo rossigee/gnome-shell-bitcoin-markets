@@ -1,4 +1,5 @@
 import * as BaseProvider from './BaseProvider';
+import { DefaultTickers } from '../defaults';
 
 export class Api extends BaseProvider.Api {
   apiName = 'BitPay';
@@ -7,15 +8,19 @@ export class Api extends BaseProvider.Api {
 
   interval = 60; // unclear, should be safe
 
-  getUrl({ base }) {
+  getUrl({ base }: BaseProvider.Ticker): string {
     return `https://bitpay.com/api/rates/${base}`;
   }
 
-  getLast(data, { base: _base, quote }) {
-    const result = data.find(({ code }) => code === quote);
+  getLast(data: any, { quote }: BaseProvider.Ticker): number {
+    const result = data.find(({ code }: any) => code === quote);
     if (!result) {
-      throw new Error(`no data for quote ${quote}`);
+      BaseProvider.throwNoData('quote', quote);
     }
     return result.rate;
+  }
+
+  getDefaultTicker(): BaseProvider.Ticker {
+    return DefaultTickers.BTC_USD;
   }
 }
