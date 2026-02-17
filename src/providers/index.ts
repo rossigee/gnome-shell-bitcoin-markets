@@ -19,7 +19,7 @@ import * as ProviderCoinGecko from './ProviderCoinGecko';
 import * as ProviderCryptoCompare from './ProviderCryptoCompare';
 import * as ProviderGate from './ProviderGate';
 import * as ProviderHitBTC from './ProviderHitBTC';
-import * as ProviderHuobi from './ProviderHuobi';
+import * as ProviderHTX from './ProviderHTX';
 import * as ProviderKraken from './ProviderKraken';
 import * as ProviderKucoin from './ProviderKucoin';
 import * as ProviderMEXC from './ProviderMEXC';
@@ -48,7 +48,8 @@ export const Providers: Record<string, BaseProvider.Api> = {
   cryptocompare: new ProviderCryptoCompare.Api(),
   gate: new ProviderGate.Api(),
   hitbtc: new ProviderHitBTC.Api(),
-  huobi: new ProviderHuobi.Api(),
+  htx: new ProviderHTX.Api(),
+  huobi: new ProviderHTX.Api(), // backward compat alias (Huobi rebranded to HTX)
   kraken: new ProviderKraken.Api(),
   kucoin: new ProviderKucoin.Api(),
   mexc: new ProviderMEXC.Api(),
