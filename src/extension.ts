@@ -83,7 +83,7 @@ class MarketIndicatorView extends PanelMenu.Button {
     layout.add_child(this._statusView);
     layout.add_child(this._indicatorView);
 
-    this.add_child(layout);
+    (this as any).add_child(layout);
 
     this._popupItemStatus = new PopupMenu.PopupMenuItem('', {
       activate: false,
@@ -91,15 +91,17 @@ class MarketIndicatorView extends PanelMenu.Button {
       can_focus: false,
     }) as PopupMenuItemWithLabel;
     this._popupItemStatus.label.set_style('max-width: 12em;');
-    this._popupItemStatus.label.clutter_text.set_line_wrap(true);
-    this.menu.addMenuItem(this._popupItemStatus);
+    (this._popupItemStatus.label as any).clutter_text.set_line_wrap(true);
+    (this.menu as PopupMenu.PopupMenu).addMenuItem(this._popupItemStatus);
 
-    this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+    (this.menu as PopupMenu.PopupMenu).addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
 
     this._popupItemSettings = new PopupMenu.PopupMenuItem('Settings');
-    this.menu.addMenuItem(this._popupItemSettings);
+    (this.menu as PopupMenu.PopupMenu).addMenuItem(this._popupItemSettings);
+    const extRef = this.ext;
     this._popupItemSettings.connect('activate', () => {
-      this.ext.openPreferences().catch((err) => {
+      const ext = extRef as ExtensionBase;
+      (ext as any).openPreferences().catch((err: unknown) => {
         console.error('Failed to open preferences:', err);
       });
     });
@@ -169,13 +171,13 @@ class MarketIndicatorView extends PanelMenu.Button {
     if (err) {
       text += '\n\n' + (err instanceof HTTP.HTTPError ? err.format('\n\n') : String(err));
     }
-    this._popupItemStatus.label.clutter_text.set_markup(text);
+    (this._popupItemStatus.label as any).clutter_text.set_markup(text);
   }
 
-  destroy() {
+  destroy(): void {
     this._indicatorView.destroy();
     this._statusView.destroy();
-    super.destroy();
+    (this as any).destroy();
   }
 }
 

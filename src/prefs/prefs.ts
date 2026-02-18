@@ -190,8 +190,8 @@ class BitcoinMarketsSettingsWidget extends Gtk.Box {
       width_request: 240,
     });
 
-    sidebar.append((this._getTreeView() as unknown) as Gtk.Widget);
-    sidebar.append((this._getToolbar() as unknown) as Gtk.Widget);
+    sidebar.append(this._getTreeView() as unknown as Gtk.Widget);
+    sidebar.append(this._getToolbar() as unknown as Gtk.Widget);
 
     this.append(sidebar);
 
@@ -314,7 +314,7 @@ export default class BitcoinMarketsSettings extends ExtensionPreferences {
     // In GNOME 49+, PreferencesPage.add() expects an AdwPreferencesGroup
     // We need to wrap our Gtk.Box in a proper container
     const group = new Adw.PreferencesGroup();
-    group.add(gtkWidget);
+    group.add(gtkWidget as unknown as Adw.PreferencesGroup);
     page.add(group);
 
     window.add(page);
