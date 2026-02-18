@@ -8,11 +8,15 @@ export class Api extends BaseProvider.Api {
   interval = 60; // unclear, should be safe
 
   getUrl({ base, quote }) {
-    return 'https://api.bitkub.com/api/market/bids?lmt=1&sym=' + `${quote}_${base}`.toLowerCase();
+    return `https://api.bitkub.com/api/market/ticker?sym=${quote}_${base}`.toUpperCase();
   }
 
-  getLast(data) {
-    return data.result[0][3]; // rate
+  getLast(data, { base, quote }) {
+    const key = `${quote}_${base}`.toUpperCase();
+    if (!data[key]) {
+      BaseProvider.throwNoData('pair', key);
+    }
+    return data[key].last;
   }
 
   getDefaultTicker(): BaseProvider.Ticker {

@@ -31,6 +31,14 @@ const mockResponses = {
   coinGecko: {
     tickers: [{ target: 'USD', last: 56438.1 }],
   },
+  bitkub: {
+    THB_BTC: {
+      id: 1,
+      last: 2745234.95,
+      lowestAsk: 2745234.95,
+      highestBid: 2745100,
+    },
+  },
 };
 
 describe('providers', function () {
@@ -68,6 +76,13 @@ describe('providers', function () {
       const ticker = { base: 'XXBT', quote: 'ZUSD' };
       const result = provider.getLast(mockResponses.kraken, ticker);
       assert.strictEqual(result, '56438.10000');
+    });
+
+    it('should parse Bitkub response correctly', function () {
+      const provider = getProvider('bitkub');
+      const ticker = { base: 'BTC', quote: 'THB' };
+      const result = provider.getLast(mockResponses.bitkub, ticker);
+      assert.strictEqual(result, 2745234.95);
     });
 
     it('should parse CoinGecko response correctly', function () {
