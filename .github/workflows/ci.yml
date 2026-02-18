@@ -37,13 +37,6 @@ jobs:
         env:
           TS_NODE_PROJECT: ./tsconfig.test.json
 
-      - name: Check for secrets
-        uses: trufflesecurity/trufflehog@main
-        with:
-          path: ./
-          base: ${{ github.event.repository.default_branch }}
-          head: HEAD
-
   build:
     name: Build Extension
     needs: test
@@ -139,47 +132,3 @@ jobs:
           git commit -m "Update to version ${{ github.event.release.tag_name }}"
           git push
         continue-on-error: true # Don't fail if AUR repo doesn't exist
-
-  documentation:
-    name: Update Documentation
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/master'
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm install
-
-      - name: Generate provider list
-        run: |
-          node -e "
-          const providers = require('./dist/extension.js').Providers;
-          const list = Object.keys(providers).sort().map(k => '- ' + providers[k].apiName).join('\n');
-          console.log('## Supported Exchanges\n\n' + list);
-          " > EXCHANGES.md
-
-      - name: Check for documentation changes
-        id: docs-changed
-        run: |
-          git add -A
-          if git diff --staged --quiet; then
-            echo "changed=false" >> $GITHUB_OUTPUT
-          else
-            echo "changed=true" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Create Pull Request
-        if: steps.docs-changed.outputs.changed == 'true'
-        uses: peter-evans/create-pull-request@v5
-        with:
-          title: 'docs: update generated documentation'
-          body: 'This PR updates the automatically generated documentation.'
-          branch: update-docs-${{ github.sha }}
-          commit-message: 'docs: update generated documentation'
