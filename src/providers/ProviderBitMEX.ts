@@ -13,13 +13,13 @@ export class Api extends BaseProvider.Api {
   interval = 10;
 
   getUrl({ base, quote }) {
-    const symbol = `${base}${quote}`.toUpperCase();
+    const symbol = BaseProvider.formatSymbol(base, quote);
     return 'https://www.bitmex.com' + `/api/v1/instrument?symbol=${symbol}&columns=lastPrice`;
   }
 
   getLast(data, { base, quote }) {
     data = data[0];
-    const symbol = `${base}${quote}`.toUpperCase();
+    const symbol = BaseProvider.formatSymbol(base, quote);
     if (data.symbol !== symbol) {
       throw new Error(`expected symbol ${symbol}, get ${data.symbol}`);
     }

@@ -16,7 +16,7 @@ export class Api extends BaseProvider.Api {
 
   getLast({ last, error }) {
     if (error) {
-      throw new Error(error);
+      BaseProvider.throwApiError(error);
     }
     return last;
   }

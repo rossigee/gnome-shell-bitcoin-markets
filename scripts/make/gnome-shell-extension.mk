@@ -22,7 +22,7 @@ all: archive
 clean:
 	rm -rf dist/ $(ZIPFILE)
 
-build: node_modules dist/ archive
+build: node_modules dist/.built archive
 
 node_modules:
 	npm install
@@ -30,7 +30,7 @@ node_modules:
 .PHONY: archive
 archive: $(ZIPFILE)
 
-$(ZIPFILE): dist/ res/metadata.json schemas
+$(ZIPFILE): dist/.built res/metadata.json schemas
 	-rm $(ZIPFILE)
 	cd dist/ && zip ../$(ZIPFILE) *.js
 	cd res && zip ../$(ZIPFILE) \
@@ -46,10 +46,12 @@ clean_src:
 check:
 	npx tsc --outDir build/
 
-.PHONY: dist/
-dist/:
+SOURCES = $(wildcard src/*.ts src/**/*.ts) rollup.config.js scripts/rollup/rollup.base.js tsconfig.json
+
+dist/.built: $(SOURCES)
 	git clean -fx src/
 	$(ROLLUP) -c
+	@touch $@
 
 .PHONY: watch
 watch:

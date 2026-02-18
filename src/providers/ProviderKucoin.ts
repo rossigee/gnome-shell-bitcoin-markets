@@ -13,7 +13,7 @@ export class Api extends BaseProvider.Api {
 
   getLast({ code, msg, data }) {
     if (code != 200000) {
-      throw new Error(msg);
+      BaseProvider.throwApiError(msg);
     }
 
     return data.price;

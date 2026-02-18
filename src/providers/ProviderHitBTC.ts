@@ -8,7 +8,7 @@ export class Api extends BaseProvider.Api {
   interval = 15;
 
   getUrl({ base, quote }) {
-    return 'https://api.hitbtc.com/api/2/public/ticker/' + `${base}${quote}`.toUpperCase();
+    return 'https://api.hitbtc.com/api/2/public/ticker/' + BaseProvider.formatSymbol(base, quote);
   }
 
   getLast({ last }) {

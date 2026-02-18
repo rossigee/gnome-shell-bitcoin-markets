@@ -13,7 +13,7 @@ export class Api extends BaseProvider.Api {
 
   getLast(data) {
     if (data.error) {
-      throw new Error(data.error);
+      BaseProvider.throwApiError(data.error);
     }
 
     return data.ll;

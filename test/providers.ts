@@ -2,6 +2,7 @@ import { describe, it } from 'mocha';
 import * as assert from 'assert';
 
 import { BaseProvider, getProvider, ProviderKey, Providers } from '../src/providers';
+import { throwNoData, throwApiError, formatSymbol } from '../src/providers/BaseProvider';
 
 // Mock response data for different provider types
 const mockResponses = {
@@ -122,6 +123,26 @@ describe('providers', function () {
       const result = provider.parseData(mockResponses.kraken, ticker);
       assert.strictEqual(typeof result, 'number');
       assert.strictEqual(result, 56438.1);
+    });
+  });
+
+  describe('BaseProvider helpers', function () {
+    it('throwNoData should throw with correct message', function () {
+      assert.throws(() => throwNoData('quote', 'EUR'), /no data for quote EUR/);
+    });
+
+    it('throwApiError should throw with provided message', function () {
+      assert.throws(() => throwApiError('rate limit exceeded'), /rate limit exceeded/);
+    });
+
+    it('throwApiError should throw "unknown error" when undefined', function () {
+      assert.throws(() => throwApiError(undefined), /unknown error/);
+    });
+
+    it('formatSymbol should concatenate and uppercase', function () {
+      assert.strictEqual(formatSymbol('btc', 'usd'), 'BTCUSD');
+      assert.strictEqual(formatSymbol('Eth', 'Eur'), 'ETHEUR');
+      assert.strictEqual(formatSymbol('BTC', 'USDT'), 'BTCUSDT');
     });
   });
 

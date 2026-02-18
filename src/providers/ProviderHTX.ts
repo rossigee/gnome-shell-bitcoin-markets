@@ -15,7 +15,7 @@ export class Api extends BaseProvider.Api {
 
   getLast(data) {
     if (data['status'] === 'error') {
-      throw new Error(data['err-msg']);
+      BaseProvider.throwApiError(data['err-msg']);
     }
 
     return data.tick.bid[0];
