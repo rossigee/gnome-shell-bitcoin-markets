@@ -7,6 +7,27 @@ node_modules/
 *.iml
 @types/
 build/
+dist/
+
+# Test cache
 .cache/
-dist
+
+# Yarn (prefer npm package-lock.json)
+yarn.lock
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
+yarn-error.log
+
+# Logs
+*.log
+e2e.log
+
+# OS files
+.DS_Store
+Thumbs.db
 .nyc_output/

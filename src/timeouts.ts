@@ -10,6 +10,11 @@ const timeoutIds: number[] = [];
 export function timeoutAdd(intervalMS: number, callback: () => void): number {
   const sourceId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, intervalMS, () => {
     callback();
+    // Remove this timeout ID from the array after it fires
+    const index = timeoutIds.indexOf(sourceId);
+    if (index > -1) {
+      timeoutIds.splice(index, 1);
+    }
     return GLib.SOURCE_REMOVE;
   });
   timeoutIds.push(sourceId);

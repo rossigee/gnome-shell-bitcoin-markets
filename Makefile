@@ -7,6 +7,6 @@ all: archive
 
 .PHONY: test
 test:
-	npm test
+	TS_NODE_PROJECT=./tsconfig.test.json npm test
 
 -include scripts/make/gnome-shell-extension.mk

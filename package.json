@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Gnome-Shell Extension to conveniently create, copy, store and upload screenshots",
   "scripts": {
-    "test": "tsx ./node_modules/.bin/mocha test/**/*.ts",
+    "test": "TS_NODE_PROJECT=./tsconfig.test.json mocha --require ts-node/register test/**/*.ts",
     "coverage": "tsx ./node_modules/.bin/mocha test/**/*.ts"
   },
   "repository": {

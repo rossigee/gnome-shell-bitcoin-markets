@@ -1,12 +1,17 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "module": "esnext",
+    "module": "commonjs",
+    "baseUrl": ".",
     "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
     "moduleResolution": "node"
   },
-  "include": [
-    "./test/**/*",
-    "./src/**/*"
-  ]
+  "include": ["./src/**/*", "./test/**/*", "./@types/**/*", "@girs/**/*"],
+  "ts-node": {
+    "transpileOnly": true,
+    "compilerOptions": {
+      "module": "commonjs"
+    }
+  }
 }

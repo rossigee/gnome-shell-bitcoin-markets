@@ -23,8 +23,8 @@ import * as ProviderHTX from './ProviderHTX';
 import * as ProviderKraken from './ProviderKraken';
 import * as ProviderKucoin from './ProviderKucoin';
 import * as ProviderMEXC from './ProviderMEXC';
-import * as ProviderNobitex from './ProviderNobitex';
 import * as ProviderPaymium from './ProviderPaymium';
+import * as ProviderPoloniex from './ProviderPoloniex';
 import * as ProviderBybit from './ProviderBybit';
 import * as ProviderBybitPerpetual from './ProviderBybitPerpetual';
 
@@ -53,8 +53,8 @@ export const Providers: Record<string, BaseProvider.Api> = {
   kraken: new ProviderKraken.Api(),
   kucoin: new ProviderKucoin.Api(),
   mexc: new ProviderMEXC.Api(),
-  nobitex: new ProviderNobitex.Api(),
   paymium: new ProviderPaymium.Api(),
+  poloniex: new ProviderPoloniex.Api(),
 };
 
 export type ProviderKey = keyof typeof Providers;
