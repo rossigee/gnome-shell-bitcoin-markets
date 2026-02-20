@@ -100,7 +100,7 @@ export async function getJSON(url: string, { userAgent }: { userAgent: string })
 
   const session = new Soup.Session({
     user_agent: userAgent,
-    timeout: 30_000,
+    timeout: 30,
   });
   const message = Soup.Message.new('GET', url);
 

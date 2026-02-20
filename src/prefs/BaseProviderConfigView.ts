@@ -1,6 +1,7 @@
 import Gtk from '@girs/gtk-4.0';
 import GObject from '@girs/gobject-2.0';
 import GLib from '@girs/glib-2.0';
+import Gio from '@girs/gio-2.0';
 
 import * as BaseProvider from '../providers/BaseProvider';
 import { getProvider } from '../providers';

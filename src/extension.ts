@@ -177,7 +177,7 @@ class MarketIndicatorView extends PanelMenu.Button {
   destroy(): void {
     this._indicatorView.destroy();
     this._statusView.destroy();
-    (this as any).destroy();
+    Clutter.Actor.prototype.destroy.call(this);
   }
 }
 
