@@ -21,9 +21,17 @@ export function timeoutAdd(intervalMS: number, callback: () => void): number {
   return sourceId;
 }
 
+export function timeoutRemove(sourceId: number): void {
+  const index = timeoutIds.indexOf(sourceId);
+  if (index > -1) {
+    timeoutIds.splice(index, 1);
+  }
+  GLib.source_remove(sourceId);
+}
+
 export function removeAllTimeouts() {
   timeoutIds.forEach((sourceId) => {
-    GLib.Source.remove(sourceId);
+    GLib.source_remove(sourceId);
   });
   timeoutIds.splice(0);
 }

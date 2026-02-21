@@ -92,19 +92,34 @@ class RateLimiter {
 
 const rateLimiter = new RateLimiter(1_000, 8);
 
-export async function getJSON(url: string, { userAgent }: { userAgent: string }): Promise<unknown> {
+let _session: Soup.Session | null = null;
+
+export function destroySession(): void {
+  if (_session) {
+    _session.abort();
+    _session = null;
+  }
+}
+
+export async function getJSON(
+  url: string,
+  { userAgent, cancellable }: { userAgent: string; cancellable: Gio.Cancellable | null },
+): Promise<unknown> {
   const uri = Glib.Uri.parse(url, Glib.UriFlags.NONE);
   if (rateLimiter.rateLimit(uri)) {
     throw new Error('rate limit exceeded for ' + url);
   }
 
-  const session = new Soup.Session({
-    user_agent: userAgent,
-    timeout: 30,
-  });
+  if (!_session) {
+    _session = new Soup.Session({
+      user_agent: userAgent,
+      timeout: 30,
+    });
+  }
+
   const message = Soup.Message.new('GET', url);
 
-  const result = await session.send_and_read_async(message, Glib.PRIORITY_DEFAULT, null);
+  const result = await _session.send_and_read_async(message, Glib.PRIORITY_DEFAULT, cancellable);
   const { status_code } = message;
   if (status_code !== Soup.Status.OK) {
     throw new HTTPError('unexpected status', message);

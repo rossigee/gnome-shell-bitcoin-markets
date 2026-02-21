@@ -67,6 +67,10 @@ class MarketIndicatorView extends PanelMenu.Button {
     this.options = options;
   }
 
+  destroy(): void {
+    (PanelMenu.Button.prototype as any).destroy.call(this);
+  }
+
   _initLayout() {
     const layout = new St.BoxLayout();
 
@@ -101,7 +105,7 @@ class MarketIndicatorView extends PanelMenu.Button {
     const extRef = this.ext;
     this._popupItemSettings.connect('activate', () => {
       const ext = extRef as ExtensionBase;
-      (ext as any).openPreferences().catch((err: unknown) => {
+      Promise.resolve((ext as any).openPreferences()).catch((err: unknown) => {
         console.error('Failed to open preferences:', err);
       });
     });
@@ -174,11 +178,6 @@ class MarketIndicatorView extends PanelMenu.Button {
     (this._popupItemStatus.label as any).clutter_text.set_markup(text);
   }
 
-  destroy(): void {
-    this._indicatorView.destroy();
-    this._statusView.destroy();
-    Clutter.Actor.prototype.destroy.call(this);
-  }
 }
 
 class IndicatorCollection {
@@ -308,7 +307,7 @@ export default class BitcoinMarketsExtension extends Extension {
     try {
       this._indicatorCollection = new IndicatorCollection(this);
     } catch (e) {
-      console.log(e);
+      console.error(e);
     }
   }
 
@@ -316,5 +315,6 @@ export default class BitcoinMarketsExtension extends Extension {
     this._indicatorCollection?.destroy();
     this._indicatorCollection = null;
     removeAllTimeouts();
+    HTTP.destroySession();
   }
 }

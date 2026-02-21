@@ -9,7 +9,7 @@ const url429 = 'https://httpstat.us/429';
 const urls = [ipify, urlRequestBin, url418, url429];
 
 urls.forEach((u) => {
-  getJSON(u, { userAgent: 'gnome-shell-bitcoin-markets/test' })
+  getJSON(u, { userAgent: 'gnome-shell-bitcoin-markets/test', cancellable: null })
     .then((res) => console.log({ url: u, res: res }))
     .catch((err) =>
       console.error('ERROR', {

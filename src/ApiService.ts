@@ -1,6 +1,7 @@
-import { timeoutAdd } from './timeouts';
+import { timeoutAdd, timeoutRemove } from './timeouts';
 import * as Config from '@gnome-shell/misc/config';
 import Glib from '@girs/glib-2.0';
+import Gio from '@girs/gio-2.0';
 
 import * as HTTP from './HTTP';
 import { getProvider, BaseProvider, Providers } from './providers';
@@ -45,7 +46,7 @@ function setPermanentError(provider: BaseProvider.Api, error: Error) {
   // Clear any existing timeout for this provider
   const existingTimeout = permanentErrorTimeouts.get(provider);
   if (existingTimeout) {
-    Glib.source_remove(existingTimeout);
+    timeoutRemove(existingTimeout);
   }
 
   // Set a new timeout to clear the error
@@ -141,6 +142,7 @@ class PollLoop {
   private signal: number | null = null;
   private subscribers: any[] = [];
   private urls: string[] = [];
+  private _cancellable: Gio.Cancellable | null = null;
 
   constructor(provider: BaseProvider.Api) {
     const interval = Number(provider.interval);
@@ -153,6 +155,7 @@ class PollLoop {
 
   start(): boolean {
     if (this.signal === null) {
+      this._cancellable = new Gio.Cancellable();
       this.signal = Glib.idle_add(Glib.PRIORITY_DEFAULT, () => {
         this.run();
         return Glib.SOURCE_REMOVE;
@@ -164,9 +167,11 @@ class PollLoop {
 
   stop() {
     if (this.signal !== null) {
-      Glib.source_remove(this.signal);
+      timeoutRemove(this.signal);
       this.signal = null;
     }
+    this._cancellable?.cancel();
+    this._cancellable = null;
   }
 
   run() {
@@ -249,6 +254,7 @@ class PollLoop {
       try {
         const response = await HTTP.getJSON(url, {
           userAgent: HTTP.getDefaultUserAgent(ext.metadata, Config.PACKAGE_VERSION),
+          cancellable: this._cancellable,
         });
         const date = new Date();
         this.cache.set(url, { date, response });
@@ -256,6 +262,9 @@ class PollLoop {
         circuitBreaker.recordSuccess(); // Record successful request
         return; // Success, exit retry loop
       } catch (err: any) {
+        if (this._cancellable === null) {
+          return; // Loop was stopped while request was in flight
+        }
         const isLastAttempt = attempt === maxRetries - 1;
 
         if (HTTP.isErrTooManyRequests(err)) {
@@ -271,6 +280,9 @@ class PollLoop {
           const delay = baseDelay * Math.pow(2, attempt);
           console.log(`Request failed, retrying in ${delay}ms... (attempt ${attempt + 1}/${maxRetries})`);
           await new Promise((resolve) => timeoutAdd(delay, () => resolve(undefined)));
+          if (this._cancellable === null) {
+            return; // Loop was stopped during retry delay
+          }
         } else {
           // Final attempt failed
           circuitBreaker.recordFailure(); // Record failed request

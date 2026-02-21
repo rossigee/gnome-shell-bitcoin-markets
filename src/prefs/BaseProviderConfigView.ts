@@ -1,7 +1,6 @@
 import Gtk from '@girs/gtk-4.0';
 import GObject from '@girs/gobject-2.0';
 import GLib from '@girs/glib-2.0';
-import Gio from '@girs/gio-2.0';
 
 import * as BaseProvider from '../providers/BaseProvider';
 import { getProvider } from '../providers';
@@ -31,17 +30,25 @@ export function makeConfigRow(description: string, widget: Gtk.Widget): Gtk.Widg
   return box;
 }
 
-function debounce(milliseconds, func) {
+function debounce(milliseconds: number, func: () => void): { callback: () => void; cancel: () => void } {
   let tag: number | null = null;
-  return () => {
-    if (tag !== null) {
-      GLib.source_remove(tag);
-    }
-    tag = GLib.timeout_add(GLib.PRIORITY_DEFAULT, milliseconds, () => {
-      func();
-      tag = null;
-      return GLib.SOURCE_REMOVE;
-    });
+  return {
+    callback: () => {
+      if (tag !== null) {
+        GLib.source_remove(tag);
+      }
+      tag = GLib.timeout_add(GLib.PRIORITY_DEFAULT, milliseconds, () => {
+        func();
+        tag = null;
+        return GLib.SOURCE_REMOVE;
+      });
+    },
+    cancel: () => {
+      if (tag !== null) {
+        GLib.source_remove(tag);
+        tag = null;
+      }
+    },
   };
 }
 
@@ -114,6 +121,7 @@ export class BaseProviderConfigView {
   private _configWidget: Gtk.Box;
   private _indicatorConfig: ConfigModel;
   private _widgets: Gtk.Widget[];
+  private _debounceCancels: (() => void)[];
 
   constructor(gettext: GettextFunc, api: string, configWidget: Gtk.Box, indicatorConfig: ConfigModel) {
     this.gettext = gettext;
@@ -122,6 +130,7 @@ export class BaseProviderConfigView {
     this._configWidget = configWidget;
     this._indicatorConfig = indicatorConfig;
     this._widgets = [];
+    this._debounceCancels = [];
     this._setDefaults(indicatorConfig);
     this._setApiDefaults(indicatorConfig);
     this._initWidgets();
@@ -166,18 +175,17 @@ export class BaseProviderConfigView {
     const entry = new Gtk.Entry({
       text: this._indicatorConfig.get(key) || defaultValue,
     });
-    entry.connect(
-      'changed',
-      debounce(500, () => {
-        if (!entry.text) {
-          throw new Error();
-        }
-        if (entry.text.length < 1) {
-          return;
-        }
-        this._indicatorConfig.set(key, entry.text.toUpperCase());
-      }),
-    );
+    const { callback, cancel } = debounce(500, () => {
+      if (!entry.text) {
+        throw new Error();
+      }
+      if (entry.text.length < 1) {
+        return;
+      }
+      this._indicatorConfig.set(key, entry.text.toUpperCase());
+    });
+    entry.connect('changed', callback);
+    this._debounceCancels.push(cancel);
 
     const rowWidget = this._addRow(label, entry);
 
@@ -213,7 +221,9 @@ export class BaseProviderConfigView {
   }
 
   destroy() {
+    this._debounceCancels.forEach((cancel) => cancel());
+    this._debounceCancels = [];
     this._widgets.forEach((widget) => this._configWidget.remove(widget));
-    this._widgets.slice(0);
+    this._widgets = [];
   }
 }
