@@ -53,7 +53,7 @@ function debounce(milliseconds: number, func: () => void): { callback: () => voi
 }
 
 export class ComboBoxView extends GObject.Object {
-  static metaInfo: GObject.MetaInfo<Record<string, never>, Record<string, never>, any> = {
+  static metaInfo: GObject.MetaInfo<Record<string, never>, Record<string, never>, unknown> = {
     GTypeName: 'ComboBoxView',
     Signals: {
       changed: {
@@ -114,7 +114,7 @@ export class ComboBoxView extends GObject.Object {
 export const RegisteredComboBoxView = registerGObjectClassWithMetaInfo(
   ComboBoxView.metaInfo,
   ComboBoxView,
-) as typeof ComboBoxView;
+);
 
 type GettextFunc = (s: string) => string;
 

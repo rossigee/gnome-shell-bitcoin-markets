@@ -13,10 +13,6 @@ const { RegisteredComboBoxView: ComboBoxView, makeConfigRow } = BaseProviderConf
 import { ConfigModel, RegisteredIndicatorCollectionModel as IndicatorCollectionModel } from './IndicatorCollectionModel';
 import { GettextFunc } from './gettext';
 
-type WidgetContainer = {
-  append(child: Gtk.Widget): void;
-};
-
 type PreferencesGroupWithWidgetAdd = Adw.PreferencesGroup & {
   add(child: Gtk.Widget): void;
 };
@@ -204,8 +200,8 @@ class BitcoinMarketsSettingsWidget extends Gtk.Box {
       width_request: 240,
     });
 
-    (sidebar as WidgetContainer).append(this._getTreeView());
-    (sidebar as WidgetContainer).append(this._getToolbar());
+    sidebar.append(this._getTreeView());
+    sidebar.append(this._getToolbar());
 
     this.append(sidebar);
 
