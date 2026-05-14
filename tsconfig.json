@@ -14,7 +14,6 @@
     "resolveJsonModule": true,
     "allowSyntheticDefaultImports": true,
     "skipLibCheck": true,
-    "experimentalDecorators": true,
     "importHelpers": true,
     "noEmit": true,
     "allowImportingTsExtensions": true,

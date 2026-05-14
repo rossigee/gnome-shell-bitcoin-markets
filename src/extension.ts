@@ -36,7 +36,6 @@ type PopupMenuItemWithLabel = PopupMenu.PopupMenuItem & {
   label: St.Label;
 };
 
-@registerGObjectClass
 class MarketIndicatorView extends PanelMenu.Button {
   options?: IndicatorOptions;
   providerLabel!: string;
@@ -94,7 +93,7 @@ class MarketIndicatorView extends PanelMenu.Button {
       hover: false,
       can_focus: false,
     }) as PopupMenuItemWithLabel;
-    this._popupItemStatus.label.set_style('max-width: 12em;');
+    (this._popupItemStatus.label as any).set_style('max-width: 12em;');
     (this._popupItemStatus.label as any).clutter_text.set_line_wrap(true);
     (this.menu as PopupMenu.PopupMenu).addMenuItem(this._popupItemStatus);
 
@@ -180,9 +179,11 @@ class MarketIndicatorView extends PanelMenu.Button {
 
 }
 
+const RegisteredMarketIndicatorView = registerGObjectClass(MarketIndicatorView);
+
 class IndicatorCollection {
   private settings: Gio.Settings;
-  private _indicators: InstanceType<typeof MarketIndicatorView>[];
+  private _indicators: InstanceType<typeof RegisteredMarketIndicatorView>[];
   private _settingsChangedId: number;
 
   constructor(private ext: ExtensionBase) {
@@ -273,7 +274,7 @@ class IndicatorCollection {
     } else {
       this._removeAll();
       const indicators = arrOptions.map((options) => {
-        return new MarketIndicatorView(this.ext, options);
+        return new RegisteredMarketIndicatorView(this.ext, options);
       });
       indicators.forEach((view, i) => {
         Main.panel.addToStatusArea(`bitcoin-market-indicator-${i}`, view);
@@ -314,7 +315,8 @@ export default class BitcoinMarketsExtension extends Extension {
   disable(): void {
     this._indicatorCollection?.destroy();
     this._indicatorCollection = null;
+    ApiService.destroy();
     removeAllTimeouts();
-    HTTP.destroySession();
+    HTTP.destroy();
   }
 }

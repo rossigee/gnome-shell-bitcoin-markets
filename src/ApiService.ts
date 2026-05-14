@@ -1,4 +1,4 @@
-import { timeoutAdd, timeoutRemove } from './timeouts';
+import { idleAdd, timeoutAdd, timeoutRemove } from './timeouts';
 import * as Config from '@gnome-shell/misc/config';
 import Glib from '@girs/glib-2.0';
 import Gio from '@girs/gio-2.0';
@@ -128,6 +128,10 @@ class PriceDataLog {
 
     return keys.map((k: Date) => ({ date: k, value: values.get(k)! }));
   }
+
+  clear() {
+    this.map.clear();
+  }
 }
 
 const getSubscriberUrl = ({ options }: Subscriber) => getProvider(options.api).getUrl(options);
@@ -143,6 +147,7 @@ class PollLoop {
   private subscribers: any[] = [];
   private urls: string[] = [];
   private _cancellable: Gio.Cancellable | null = null;
+  private retryTimeouts = new Map<number, () => void>();
 
   constructor(provider: BaseProvider.Api) {
     const interval = Number(provider.interval);
@@ -156,9 +161,8 @@ class PollLoop {
   start(): boolean {
     if (this.signal === null) {
       this._cancellable = new Gio.Cancellable();
-      this.signal = Glib.idle_add(Glib.PRIORITY_DEFAULT, () => {
+      this.signal = idleAdd(() => {
         this.run();
-        return Glib.SOURCE_REMOVE;
       });
       return true;
     }
@@ -172,6 +176,32 @@ class PollLoop {
     }
     this._cancellable?.cancel();
     this._cancellable = null;
+    this.retryTimeouts.forEach((resolve, sourceId) => {
+      timeoutRemove(sourceId);
+      resolve();
+    });
+    this.retryTimeouts.clear();
+  }
+
+  destroy() {
+    this.stop();
+    this.cache.clear();
+    this.priceDataLog.clear();
+    this.subscribers = [];
+    this.urls = [];
+  }
+
+  private waitForRetry(delay: number): Promise<void> {
+    return new Promise((resolve) => {
+      const sourceId = timeoutAdd(delay, () => {
+        this.retryTimeouts.delete(sourceId);
+        resolve();
+      });
+      this.retryTimeouts.set(sourceId, () => {
+        this.retryTimeouts.delete(sourceId);
+        resolve();
+      });
+    });
   }
 
   run() {
@@ -279,7 +309,7 @@ class PollLoop {
           // Calculate exponential backoff delay
           const delay = baseDelay * Math.pow(2, attempt);
           console.log(`Request failed, retrying in ${delay}ms... (attempt ${attempt + 1}/${maxRetries})`);
-          await new Promise((resolve) => timeoutAdd(delay, () => resolve(undefined)));
+          await this.waitForRetry(delay);
           if (this._cancellable === null) {
             return; // Loop was stopped during retry delay
           }
@@ -324,4 +354,15 @@ export function setSubscribers(subscribers: Subscriber[]) {
   });
 
   _pollLoops.forEach((loop) => loop.setSubscribers(subscribers));
+}
+
+export function destroy() {
+  _pollLoops.forEach((loop) => loop.destroy());
+
+  permanentErrorTimeouts.forEach((sourceId) => {
+    timeoutRemove(sourceId);
+  });
+  permanentErrorTimeouts.clear();
+  permanentErrors.clear();
+  circuitBreakers.clear();
 }
