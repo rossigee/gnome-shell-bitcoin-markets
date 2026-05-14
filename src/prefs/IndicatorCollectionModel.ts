@@ -3,7 +3,6 @@ import GObject from '@girs/gobject-2.0';
 import Gio from '@girs/gio-2.0';
 
 import { getProvider } from '../providers';
-import { registerGObjectClass } from '../gjs';
 import { Defaults } from '../defaults';
 
 const INDICATORS_KEY = 'indicators';
@@ -28,7 +27,6 @@ export class ConfigModel {
   }
 }
 
-@registerGObjectClass
 export class IndicatorCollectionModel extends Gtk.ListStore {
   private _settings: Gio.Settings;
   private Columns: Record<string, number> = {};
@@ -132,3 +130,7 @@ export class IndicatorCollectionModel extends Gtk.ListStore {
     this._writeSettings();
   }
 }
+
+export const RegisteredIndicatorCollectionModel = GObject.registerClass(
+  IndicatorCollectionModel,
+) as typeof IndicatorCollectionModel;
