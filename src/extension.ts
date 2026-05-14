@@ -32,8 +32,26 @@ interface IndicatorOptions extends Options {
   show_change: boolean;
 }
 
+type ClutterTextLike = {
+  set_line_wrap(wrap: boolean): void;
+  set_markup(markup: string): void;
+};
+
+type StLabelWithClutterText = {
+  set_style(style: string): void;
+  clutter_text: ClutterTextLike;
+};
+
 type PopupMenuItemWithLabel = PopupMenu.PopupMenuItem & {
-  label: St.Label;
+  label: StLabelWithClutterText;
+};
+
+type ActorContainer = {
+  add_child(child: Clutter.Actor): void;
+};
+
+type PreferencesOpener = ExtensionBase & {
+  openPreferences(): void | Promise<void>;
 };
 
 class MarketIndicatorView extends PanelMenu.Button {
@@ -67,7 +85,7 @@ class MarketIndicatorView extends PanelMenu.Button {
   }
 
   destroy(): void {
-    (PanelMenu.Button.prototype as any).destroy.call(this);
+    PanelMenu.Button.prototype.destroy.call(this);
   }
 
   _initLayout() {
@@ -86,15 +104,15 @@ class MarketIndicatorView extends PanelMenu.Button {
     layout.add_child(this._statusView);
     layout.add_child(this._indicatorView);
 
-    (this as any).add_child(layout);
+    (this as unknown as ActorContainer).add_child(layout);
 
     this._popupItemStatus = new PopupMenu.PopupMenuItem('', {
       activate: false,
       hover: false,
       can_focus: false,
     }) as PopupMenuItemWithLabel;
-    (this._popupItemStatus.label as any).set_style('max-width: 12em;');
-    (this._popupItemStatus.label as any).clutter_text.set_line_wrap(true);
+    this._popupItemStatus.label.set_style('max-width: 12em;');
+    this._popupItemStatus.label.clutter_text.set_line_wrap(true);
     (this.menu as PopupMenu.PopupMenu).addMenuItem(this._popupItemStatus);
 
     (this.menu as PopupMenu.PopupMenu).addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
@@ -103,8 +121,8 @@ class MarketIndicatorView extends PanelMenu.Button {
     (this.menu as PopupMenu.PopupMenu).addMenuItem(this._popupItemSettings);
     const extRef = this.ext;
     this._popupItemSettings.connect('activate', () => {
-      const ext = extRef as ExtensionBase;
-      Promise.resolve((ext as any).openPreferences()).catch((err: unknown) => {
+      const ext = extRef as PreferencesOpener;
+      Promise.resolve(ext.openPreferences()).catch((err: unknown) => {
         console.error('Failed to open preferences:', err);
       });
     });
@@ -174,12 +192,18 @@ class MarketIndicatorView extends PanelMenu.Button {
     if (err) {
       text += '\n\n' + (err instanceof HTTP.HTTPError ? err.format('\n\n') : String(err));
     }
-    (this._popupItemStatus.label as any).clutter_text.set_markup(text);
+    this._popupItemStatus.label.clutter_text.set_markup(text);
   }
 
 }
 
 const RegisteredMarketIndicatorView = registerGObjectClass(MarketIndicatorView);
+
+function hasOptions(
+  indicator: InstanceType<typeof RegisteredMarketIndicatorView>,
+): indicator is InstanceType<typeof RegisteredMarketIndicatorView> & ApiService.Subscriber {
+  return indicator.options !== undefined;
+}
 
 class IndicatorCollection {
   private settings: Gio.Settings;
@@ -282,7 +306,7 @@ class IndicatorCollection {
       this._indicators = indicators;
     }
 
-    ApiService.setSubscribers(this._indicators.filter((i) => i.options) as ApiService.Subscriber[]);
+    ApiService.setSubscribers(this._indicators.filter(hasOptions));
   }
 
   _removeAll() {
