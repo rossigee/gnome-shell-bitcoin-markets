@@ -1,6 +1,7 @@
 import Gtk from '@girs/gtk-4.0';
 import GObject from '@girs/gobject-2.0';
 import GLib from '@girs/glib-2.0';
+import { registerGObjectClassWithMetaInfo } from '../gjs';
 
 import * as BaseProvider from '../providers/BaseProvider';
 import { getProvider } from '../providers';
@@ -110,8 +111,8 @@ export class ComboBoxView extends GObject.Object {
   }
 }
 
-export const RegisteredComboBoxView = GObject.registerClass(
-  ComboBoxView.metaInfo as any,
+export const RegisteredComboBoxView = registerGObjectClassWithMetaInfo(
+  ComboBoxView.metaInfo,
   ComboBoxView,
 ) as typeof ComboBoxView;
 

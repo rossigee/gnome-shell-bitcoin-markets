@@ -24,3 +24,15 @@ export function registerGObjectClass<
     return GObject.registerClass<K, T>(target) as typeof target;
   }
 }
+
+export function registerGObjectClassWithMetaInfo<
+  K,
+  T extends { new (...params: any[]): K },
+  P = Record<string, never>,
+  S = Record<string, never>,
+  I = never,
+>(metaInfo: GObject.MetaInfo<P, S, I>, target: T) {
+  // GIR typings do not model the overload well, so keep the workaround here.
+  // @ts-ignore
+  return GObject.registerClass<K, T>(metaInfo, target) as typeof target;
+}

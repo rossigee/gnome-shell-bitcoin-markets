@@ -1,6 +1,7 @@
 import Gtk from '@girs/gtk-4.0';
 import GObject from '@girs/gobject-2.0';
 import Gio from '@girs/gio-2.0';
+import { registerGObjectClass } from '../gjs';
 
 import { getProvider } from '../providers';
 import { Defaults } from '../defaults';
@@ -11,15 +12,15 @@ export class ConfigModel {
   private attributes: Record<string, unknown>;
 
   constructor(private listStore: Gtk.ListStore, private iter: Gtk.TreeIter, private column = 1) {
-    this.attributes = JSON.parse(this.listStore.get_value(iter, this.column) as string);
+    this.attributes = JSON.parse(String(this.listStore.get_value(iter, this.column)));
   }
 
-  set(key: string, value: any) {
+  set(key: string, value: unknown) {
     this.attributes[key] = value;
     this.listStore.set(this.iter, [this.column], [JSON.stringify(this.attributes)]);
   }
 
-  get(key) {
+  get(key: string) {
     if (key in this.attributes) {
       return this.attributes[key];
     }
@@ -81,8 +82,7 @@ export class IndicatorCollectionModel extends Gtk.ListStore {
 
     const configs = this._settings.get_strv(INDICATORS_KEY);
 
-    Object.keys(configs).forEach((key) => {
-      const json = configs[key];
+    configs.forEach((json) => {
       try {
         const label = this._getLabel(JSON.parse(json));
         this.set(this.append(), [this.Columns.LABEL, this.Columns.CONFIG], [label, json]);
@@ -96,10 +96,10 @@ export class IndicatorCollectionModel extends Gtk.ListStore {
   _writeSettings() {
     // eslint-disable-next-line
     let [res, iter] = this.get_iter_first();
-    const configs: any[] = [];
+    const configs: string[] = [];
 
     while (res) {
-      configs.push(this.get_value(iter, this.Columns.CONFIG));
+      configs.push(String(this.get_value(iter, this.Columns.CONFIG)));
       res = this.iter_next(iter);
     }
 
@@ -107,10 +107,10 @@ export class IndicatorCollectionModel extends Gtk.ListStore {
   }
 
   _onRowChanged(self, path, iter) {
-    const config = this.get_value(iter, this.Columns.CONFIG);
+    const config = String(this.get_value(iter, this.Columns.CONFIG));
 
     this.set(iter, [this.Columns.LABEL, this.Columns.CONFIG], ([
-      this._getLabel(JSON.parse(config as any)),
+      this._getLabel(JSON.parse(config)),
       config,
     ] as unknown) as GObject.Value[]);
 
@@ -131,6 +131,6 @@ export class IndicatorCollectionModel extends Gtk.ListStore {
   }
 }
 
-export const RegisteredIndicatorCollectionModel = GObject.registerClass(
+export const RegisteredIndicatorCollectionModel = registerGObjectClass(
   IndicatorCollectionModel,
-) as typeof IndicatorCollectionModel;
+);
