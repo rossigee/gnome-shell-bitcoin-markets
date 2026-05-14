@@ -1,6 +1,5 @@
 import { idleAdd, timeoutAdd, timeoutRemove } from './timeouts';
 import * as Config from '@gnome-shell/misc/config';
-import Glib from '@girs/glib-2.0';
 import Gio from '@girs/gio-2.0';
 
 import * as HTTP from './HTTP';
@@ -209,6 +208,10 @@ class PollLoop {
       this.update();
     } catch (e) {
       console.error(e);
+    }
+
+    if (this._cancellable === null) {
+      return;
     }
 
     this.signal = timeoutAdd(this.interval * 1000, this.run.bind(this));
