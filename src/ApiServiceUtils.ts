@@ -35,8 +35,6 @@ export function createContextualError(
   const statusCode = getHttpStatusCode(originalError);
   const originalMsg = originalError.message || '';
 
-  console.log(`[Bitcoin Markets] Original error: "${originalMsg}"`);
-
   if (isRateLimit) {
     error.message = ERROR_MESSAGES.RATE_LIMITED;
   } else if (statusCode === 404) {
