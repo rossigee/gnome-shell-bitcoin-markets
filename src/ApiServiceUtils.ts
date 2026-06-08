@@ -57,7 +57,8 @@ export function createContextualError(
     message = ERROR_MESSAGES.SERVER_ERROR;
   } else if (statusCode && statusCode >= 400) {
     message = ERROR_MESSAGES.CLIENT_ERROR;
-  } else if (originalMsg.includes('no data for') || originalMsg.includes('undefined')) {
+  } else if (originalMsg.includes('invalid price value') || originalMsg.includes('no data for') || originalMsg.includes('undefined')) {
+    // Provider couldn't extract price from response - likely invalid pair or empty response
     message = ERROR_MESSAGES.INVALID_PAIR;
   } else if (originalMsg.includes('timeout') || originalMsg.includes('Timeout')) {
     message = ERROR_MESSAGES.TIMEOUT;
