@@ -65,6 +65,14 @@ class MarketIndicatorView extends PanelMenu.Button {
     }
 
     this.options = options;
+    // Clear previous error state when settings change
+    this._clearError();
+  }
+
+  _clearError() {
+    this._displayStatus(_Symbols.refresh);
+    this._setTooltip(null);
+    this._updatePopupItemLabel();
   }
 
   destroy(): void {
