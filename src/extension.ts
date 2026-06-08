@@ -28,6 +28,12 @@ const _Symbols = {
   unchanged: ' ',
 };
 
+const _StatusToSymbol = {
+  up: _Symbols.up,
+  down: _Symbols.down,
+  unchanged: _Symbols.unchanged,
+};
+
 interface IndicatorOptions extends Options {
   show_change: boolean;
 }
@@ -132,7 +138,7 @@ class MarketIndicatorView extends PanelMenu.Button {
   }
 
   onUpdateStart() {
-    this._displayStatus(_Symbols.refresh);
+    this._showLoading();
   }
 
   onUpdateError(error) {
@@ -142,43 +148,34 @@ class MarketIndicatorView extends PanelMenu.Button {
     this._setTooltip(error);
   }
 
-  _setTooltip(error) {
-    if (!error) {
-      (this as any).set_tooltip_text('');
-      return;
-    }
-    const tooltipText = error instanceof Error ? error.message : String(error);
-    (this as any).set_tooltip_text(tooltipText);
-  }
-
   onClearValue() {
-    this._displayStatus(_Symbols.refresh);
+    this._showLoading();
     this._displayText(Format.format(undefined, this.options!));
-    this._updatePopupItemLabel();
-    this._setTooltip(null);
   }
 
   onUpdatePriceData(priceData) {
     const [p, p1] = priceData;
-
     const change = p1 ? this.getChange(p.value, p1.value) : 'unchanged';
 
-    const _StatusToSymbol = {
-      up: _Symbols.up,
-      down: _Symbols.down,
-      unchanged: ' ',
-    };
-
-    let symbol = ' ';
     if (this.options!.show_change) {
-      symbol = _StatusToSymbol[change];
-      this._displayStatus(symbol);
+      this._displayStatus(_StatusToSymbol[change]);
     } else {
       this._statusView.width = 0;
     }
 
     this._displayText(Format.format(p.value, this.options!));
     this._updatePopupItemLabel();
+  }
+
+  private _showLoading() {
+    this._displayStatus(_Symbols.refresh);
+    this._setTooltip(null);
+    this._updatePopupItemLabel();
+  }
+
+  private _setTooltip(error?: Error | null) {
+    const tooltipText = !error ? '' : (error instanceof Error ? error.message : String(error));
+    (this as any).set_tooltip_text(tooltipText);
   }
 
   _displayStatus(text) {
