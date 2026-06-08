@@ -48,7 +48,7 @@ function classifyError(originalError: Error): string {
 function formatContext(context?: { provider?: { apiName: string }; ticker?: { base: string; quote: string } }): string {
   if (!context?.provider && !context?.ticker) return '';
 
-  const parts = [];
+  const parts: string[] = [];
   if (context.provider) parts.push(`Provider: ${context.provider.apiName}`);
   if (context.ticker) parts.push(`Pair: ${context.ticker.base}/${context.ticker.quote}`);
 
