@@ -5,11 +5,21 @@ function isErrorTooManyRequests(err: Error): boolean {
   );
 }
 
+function isHttpError(err: Error): boolean {
+  return !!(err as any).soupMessage;
+}
+
+function getHttpStatusCode(err: Error): number | null {
+  return (err as any).soupMessage?.status_code || null;
+}
+
 export const ERROR_MESSAGES = {
   NETWORK_ERROR: 'Unable to connect to exchange. Check your internet connection.',
   RATE_LIMITED: 'Exchange rate limit exceeded. Data will update automatically.',
+  INVALID_PAIR: 'This trading pair is not supported by this exchange. Try a different pair in Settings.',
   INVALID_RESPONSE: 'Exchange returned invalid data. This may be temporary.',
   PROVIDER_DISABLED: 'Provider is temporarily disabled due to repeated failures.',
+  NOT_FOUND: 'Exchange endpoint not found. This pair may not be supported.',
   UNKNOWN_ERROR: 'An unexpected error occurred while fetching price data.',
 } as const;
 
@@ -22,13 +32,23 @@ export function createContextualError(
   // Determine error type and message
   // Check for rate limit (429) - supports both HTTPError (soupMessage.status_code) and test/generic errors
   const isRateLimit = isErrorTooManyRequests(originalError);
+  const statusCode = getHttpStatusCode(originalError);
+  const originalMsg = originalError.message || '';
+
+  console.log(`[Bitcoin Markets] Original error: "${originalMsg}"`);
 
   if (isRateLimit) {
     error.message = ERROR_MESSAGES.RATE_LIMITED;
-  } else if (originalError.message.includes('fetch')) {
+  } else if (statusCode === 404) {
+    error.message = ERROR_MESSAGES.NOT_FOUND;
+  } else if (originalMsg.includes('no data for') || originalMsg.includes('undefined')) {
+    // Provider couldn't extract price from response - likely invalid pair
+    error.message = ERROR_MESSAGES.INVALID_PAIR;
+  } else if (originalMsg.includes('fetch')) {
     error.message = ERROR_MESSAGES.NETWORK_ERROR;
-  } else if (originalError.message.includes('JSON') || originalError.message.includes('parse')) {
-    error.message = ERROR_MESSAGES.INVALID_RESPONSE;
+  } else if (originalMsg.includes('JSON') || originalMsg.includes('parse')) {
+    // If JSON parsing fails, likely invalid pair or empty response
+    error.message = ERROR_MESSAGES.INVALID_PAIR;
   } else {
     error.message = ERROR_MESSAGES.UNKNOWN_ERROR;
   }
@@ -40,9 +60,6 @@ export function createContextualError(
   }
   if (context?.ticker) {
     contextParts.push(`Pair: ${context.ticker.base}/${context.ticker.quote}`);
-  }
-  if (context?.url) {
-    contextParts.push(`URL: ${context.url}`);
   }
 
   if (contextParts.length > 0) {

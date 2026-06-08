@@ -131,12 +131,23 @@ class MarketIndicatorView extends PanelMenu.Button {
     this._displayText('error');
     this._displayStatus(_Symbols.error);
     this._updatePopupItemLabel(error);
+    this._setTooltip(error);
+  }
+
+  _setTooltip(error) {
+    if (!error) {
+      (this as any).set_tooltip_text('');
+      return;
+    }
+    const tooltipText = error instanceof Error ? error.message : String(error);
+    (this as any).set_tooltip_text(tooltipText);
   }
 
   onClearValue() {
     this._displayStatus(_Symbols.refresh);
     this._displayText(Format.format(undefined, this.options!));
     this._updatePopupItemLabel();
+    this._setTooltip(null);
   }
 
   onUpdatePriceData(priceData) {
@@ -173,7 +184,8 @@ class MarketIndicatorView extends PanelMenu.Button {
   _updatePopupItemLabel(err?) {
     let text = this.providerLabel;
     if (err) {
-      text += '\n\n' + (err instanceof HTTP.HTTPError ? err.format('\n\n') : String(err));
+      const errorMsg = err instanceof HTTP.HTTPError ? err.format('\n\n') : String(err);
+      text += '\n\n<b>⚠ Error:</b>\n' + errorMsg;
     }
     (this._popupItemStatus.label as any).clutter_text.set_markup(text);
   }
