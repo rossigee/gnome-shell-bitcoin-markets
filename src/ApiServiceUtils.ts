@@ -1,14 +1,3 @@
-// Helper to detect rate limit errors - supports both HTTPError (soupMessage.status_code) and generic errors
-function isErrorTooManyRequests(err: Error): boolean {
-  return !!(
-    (err as any).soupMessage?.status_code === 429 || err.message.includes('429')
-  );
-}
-
-function isHttpError(err: Error): boolean {
-  return !!(err as any).soupMessage;
-}
-
 function getHttpStatusCode(err: Error): number | null {
   return (err as any).soupMessage?.status_code || null;
 }
@@ -17,7 +6,6 @@ export const ERROR_MESSAGES = {
   NETWORK_ERROR: 'Unable to connect to exchange. Check your internet connection.',
   RATE_LIMITED: 'Exchange rate limit exceeded. Data will update automatically.',
   INVALID_PAIR: 'This trading pair is not supported by this exchange. Try a different pair in Settings.',
-  INVALID_RESPONSE: 'Exchange returned invalid data. This may be temporary.',
   PROVIDER_DISABLED: 'Provider is temporarily disabled due to repeated failures.',
   NOT_FOUND: 'Exchange endpoint not found. This pair may not be supported.',
   SERVER_ERROR: 'Exchange server error (5xx). Their service may be temporarily unavailable.',
@@ -26,13 +14,45 @@ export const ERROR_MESSAGES = {
   UNKNOWN_ERROR: 'Error fetching price data.',
 } as const;
 
-function buildErrorMessage(baseMessage: string, originalMsg: string): string {
-  // If we have a specific message that might be helpful, append it
-  if (originalMsg && !originalMsg.toLowerCase().includes(baseMessage.toLowerCase())) {
-    const cleanMsg = originalMsg.substring(0, 60); // Limit length
-    return `${baseMessage} (${cleanMsg})`;
+function classifyError(originalError: Error): string {
+  const statusCode = getHttpStatusCode(originalError);
+  const msg = originalError.message || '';
+
+  // HTTP status code errors
+  if (statusCode === 429 || msg.includes('429')) return ERROR_MESSAGES.RATE_LIMITED;
+  if (statusCode === 404) return ERROR_MESSAGES.NOT_FOUND;
+  if (statusCode && statusCode >= 500) return ERROR_MESSAGES.SERVER_ERROR;
+  if (statusCode && statusCode >= 400) return ERROR_MESSAGES.CLIENT_ERROR;
+
+  // Data extraction errors - invalid pair produces invalid price value, NaN, or missing fields
+  if (msg.includes('invalid price value') || msg.includes('no data for') || msg.includes('undefined')) {
+    return ERROR_MESSAGES.INVALID_PAIR;
   }
-  return baseMessage;
+
+  // Network and timing errors
+  if (msg.includes('timeout') || msg.includes('Timeout')) return ERROR_MESSAGES.TIMEOUT;
+  if (msg.includes('fetch') || msg.includes('Connection')) return ERROR_MESSAGES.NETWORK_ERROR;
+
+  // Malformed response
+  if (msg.includes('JSON') || msg.includes('parse')) return ERROR_MESSAGES.INVALID_PAIR;
+
+  // Unknown - include original message if available
+  if (msg) {
+    const cleanMsg = msg.substring(0, 60);
+    return `${ERROR_MESSAGES.UNKNOWN_ERROR} (${cleanMsg})`;
+  }
+
+  return ERROR_MESSAGES.UNKNOWN_ERROR;
+}
+
+function formatContext(context?: { provider?: { apiName: string }; ticker?: { base: string; quote: string } }): string {
+  if (!context?.provider && !context?.ticker) return '';
+
+  const parts = [];
+  if (context.provider) parts.push(`Provider: ${context.provider.apiName}`);
+  if (context.ticker) parts.push(`Pair: ${context.ticker.base}/${context.ticker.quote}`);
+
+  return ` (${parts.join(', ')})`;
 }
 
 export function createContextualError(
@@ -40,57 +60,8 @@ export function createContextualError(
   context?: { url?: string; ticker?: { base: string; quote: string }; provider?: { apiName: string } },
 ): Error {
   const error = new Error();
-
-  const isRateLimit = isErrorTooManyRequests(originalError);
-  const statusCode = getHttpStatusCode(originalError);
-  const originalMsg = originalError.message || '';
-
-  let message: string;
-
-  if (isRateLimit) {
-    message = ERROR_MESSAGES.RATE_LIMITED;
-  } else if (statusCode === 429) {
-    message = ERROR_MESSAGES.RATE_LIMITED;
-  } else if (statusCode === 404) {
-    message = ERROR_MESSAGES.NOT_FOUND;
-  } else if (statusCode && statusCode >= 500) {
-    message = ERROR_MESSAGES.SERVER_ERROR;
-  } else if (statusCode && statusCode >= 400) {
-    message = ERROR_MESSAGES.CLIENT_ERROR;
-  } else if (originalMsg.includes('invalid price value') || originalMsg.includes('no data for') || originalMsg.includes('undefined')) {
-    // Provider couldn't extract price from response - likely invalid pair or empty response
-    message = ERROR_MESSAGES.INVALID_PAIR;
-  } else if (originalMsg.includes('timeout') || originalMsg.includes('Timeout')) {
-    message = ERROR_MESSAGES.TIMEOUT;
-  } else if (originalMsg.includes('fetch') || originalMsg.includes('Connection')) {
-    message = ERROR_MESSAGES.NETWORK_ERROR;
-  } else if (originalMsg.includes('JSON') || originalMsg.includes('parse')) {
-    message = ERROR_MESSAGES.INVALID_PAIR;
-  } else if (originalMsg) {
-    // For unknown errors, include the actual error message for context
-    message = buildErrorMessage(ERROR_MESSAGES.UNKNOWN_ERROR, originalMsg);
-  } else {
-    message = ERROR_MESSAGES.UNKNOWN_ERROR;
-  }
-
-  error.message = message;
-
-  // Add context information
-  const contextParts: string[] = [];
-  if (context?.provider) {
-    contextParts.push(`Provider: ${context.provider.apiName}`);
-  }
-  if (context?.ticker) {
-    contextParts.push(`Pair: ${context.ticker.base}/${context.ticker.quote}`);
-  }
-
-  if (contextParts.length > 0) {
-    error.message += ` (${contextParts.join(', ')})`;
-  }
-
-  // Preserve original error for debugging
+  error.message = classifyError(originalError) + formatContext(context);
   (error as any).originalError = originalError;
-
   return error;
 }
 
