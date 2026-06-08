@@ -1,10 +1,10 @@
 import Gtk from '@girs/gtk-4.0';
 import GObject from '@girs/gobject-2.0';
 import GLib from '@girs/glib-2.0';
+import { registerGObjectClassWithMetaInfo } from '../gjs';
 
 import * as BaseProvider from '../providers/BaseProvider';
 import { getProvider } from '../providers';
-import { registerGObjectClass } from '../gjs';
 
 import { ComboBoxOptions } from './prefs';
 import { ConfigModel } from './IndicatorCollectionModel'
@@ -52,9 +52,8 @@ function debounce(milliseconds: number, func: () => void): { callback: () => voi
   };
 }
 
-@registerGObjectClass
 export class ComboBoxView extends GObject.Object {
-  static metaInfo: GObject.MetaInfo<Record<string, never>, Record<string, never>, any> = {
+  static metaInfo: GObject.MetaInfo<Record<string, never>, Record<string, never>, unknown> = {
     GTypeName: 'ComboBoxView',
     Signals: {
       changed: {
@@ -111,6 +110,11 @@ export class ComboBoxView extends GObject.Object {
     });
   }
 }
+
+export const RegisteredComboBoxView = registerGObjectClassWithMetaInfo(
+  ComboBoxView.metaInfo,
+  ComboBoxView,
+);
 
 type GettextFunc = (s: string) => string;
 

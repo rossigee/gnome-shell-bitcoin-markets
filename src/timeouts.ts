@@ -1,6 +1,23 @@
 import GLib from '@girs/glib-2.0';
 
-const timeoutIds: number[] = [];
+const sourceIds = new Set<number>();
+
+function trackSource(sourceId: number): number {
+  sourceIds.add(sourceId);
+  return sourceId;
+}
+
+function untrackSource(sourceId: number): boolean {
+  return sourceIds.delete(sourceId);
+}
+
+export function sourceRemove(sourceId: number): boolean {
+  if (!untrackSource(sourceId)) {
+    return false;
+  }
+
+  return GLib.source_remove(sourceId);
+}
 
 /**
  * Add single-shot timeout
@@ -8,30 +25,30 @@ const timeoutIds: number[] = [];
  * @param callback
  */
 export function timeoutAdd(intervalMS: number, callback: () => void): number {
-  const sourceId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, intervalMS, () => {
+  const sourceId = trackSource(GLib.timeout_add(GLib.PRIORITY_DEFAULT, intervalMS, () => {
+    untrackSource(sourceId);
     callback();
-    // Remove this timeout ID from the array after it fires
-    const index = timeoutIds.indexOf(sourceId);
-    if (index > -1) {
-      timeoutIds.splice(index, 1);
-    }
     return GLib.SOURCE_REMOVE;
-  });
-  timeoutIds.push(sourceId);
+  }));
+  return sourceId;
+}
+
+export function idleAdd(callback: () => void): number {
+  const sourceId = trackSource(GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
+    untrackSource(sourceId);
+    callback();
+    return GLib.SOURCE_REMOVE;
+  }));
+
   return sourceId;
 }
 
 export function timeoutRemove(sourceId: number): void {
-  const index = timeoutIds.indexOf(sourceId);
-  if (index > -1) {
-    timeoutIds.splice(index, 1);
-  }
-  GLib.source_remove(sourceId);
+  sourceRemove(sourceId);
 }
 
 export function removeAllTimeouts() {
-  timeoutIds.forEach((sourceId) => {
-    GLib.source_remove(sourceId);
-  });
-  timeoutIds.splice(0);
+  for (const sourceId of [...sourceIds]) {
+    sourceRemove(sourceId);
+  }
 }

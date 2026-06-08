@@ -2,16 +2,20 @@ import Adw from '@girs/adw-1';
 import Gtk from '@girs/gtk-4.0';
 import { ExtensionBase } from '@gnome-shell/extensions/extension';
 import { ExtensionPreferences } from '@gnome-shell/extensions/prefs';
-
 import { registerGObjectClass } from '../gjs';
+
 import * as Format from '../format/Format';
 import { getProvider, Providers } from '../providers';
 
 import * as BaseProviderConfigView from './BaseProviderConfigView';
 
-const { ComboBoxView, makeConfigRow } = BaseProviderConfigView;
-import { ConfigModel, IndicatorCollectionModel } from './IndicatorCollectionModel';
+const { RegisteredComboBoxView: ComboBoxView, makeConfigRow } = BaseProviderConfigView;
+import { ConfigModel, RegisteredIndicatorCollectionModel as IndicatorCollectionModel } from './IndicatorCollectionModel';
 import { GettextFunc } from './gettext';
+
+type PreferencesGroupWithWidgetAdd = Adw.PreferencesGroup & {
+  add(child: Gtk.Widget): void;
+};
 
 export interface ComboBoxOptions {
   value: string;
@@ -98,6 +102,13 @@ class IndicatorConfigView {
     }
   }
 
+  destroy() {
+    if (this._apiConfigView) {
+      this._apiConfigView.destroy();
+      this._apiConfigView = undefined;
+    }
+  }
+
   _confFormat(): Gtk.Widget {
     const format = this._indicatorConfig.get('format');
 
@@ -160,7 +171,6 @@ class IndicatorConfigView {
   }
 }
 
-@registerGObjectClass
 class BitcoinMarketsSettingsWidget extends Gtk.Box {
   private gettext: GettextFunc;
   private _store?: InstanceType<typeof IndicatorCollectionModel>;
@@ -190,8 +200,8 @@ class BitcoinMarketsSettingsWidget extends Gtk.Box {
       width_request: 240,
     });
 
-    sidebar.append(this._getTreeView() as unknown as Gtk.Widget);
-    sidebar.append(this._getToolbar() as unknown as Gtk.Widget);
+    sidebar.append(this._getTreeView());
+    sidebar.append(this._getToolbar());
 
     this.append(sidebar);
 
@@ -212,7 +222,7 @@ class BitcoinMarketsSettingsWidget extends Gtk.Box {
     this._selection.connect('changed', this._onSelectionChanged.bind(this));
   }
 
-  _getTreeView() {
+  _getTreeView(): Gtk.TreeView {
     this._treeView = new Gtk.TreeView({
       model: this._store,
       headers_visible: false,
@@ -230,7 +240,7 @@ class BitcoinMarketsSettingsWidget extends Gtk.Box {
     return this._treeView;
   }
 
-  _getToolbar() {
+  _getToolbar(): Gtk.Box {
     const toolbar = (this._toolbar = new Gtk.Box({}));
 
     /* new widget button with menu */
@@ -263,6 +273,7 @@ class BitcoinMarketsSettingsWidget extends Gtk.Box {
 
   _showIndicatorConfig(indicatorConfig: ConfigModel | null) {
     if (this._indicatorConfigView) {
+      this._indicatorConfigView.destroy();
       this._configLayout!.remove(this._indicatorConfigView.widget);
       this._indicatorConfigView = null;
     }
@@ -304,18 +315,30 @@ class BitcoinMarketsSettingsWidget extends Gtk.Box {
 
     this._updateToolbar();
   }
+
+  destroyView() {
+    this._indicatorConfigView?.destroy();
+    this._indicatorConfigView = null;
+  }
 }
+
+const RegisteredBitcoinMarketsSettingsWidget = registerGObjectClass(
+  BitcoinMarketsSettingsWidget,
+);
 
 export default class BitcoinMarketsSettings extends ExtensionPreferences {
   fillPreferencesWindow(window: Adw.PreferencesWindow): void {
     const page = new Adw.PreferencesPage();
-    const gtkWidget = new BitcoinMarketsSettingsWidget(this);
+    const gtkWidget = new RegisteredBitcoinMarketsSettingsWidget(this);
 
-    // In GNOME 49+, PreferencesPage.add() expects an AdwPreferencesGroup
-    // We need to wrap our Gtk.Box in a proper container
     const group = new Adw.PreferencesGroup();
-    group.add(gtkWidget as unknown as Adw.PreferencesGroup);
+    (group as PreferencesGroupWithWidgetAdd).add(gtkWidget);
     page.add(group);
+
+    window.connect('close-request', () => {
+      gtkWidget.destroyView();
+      return false;
+    });
 
     window.add(page);
   }

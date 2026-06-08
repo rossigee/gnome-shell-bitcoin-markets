@@ -88,6 +88,10 @@ class RateLimiter {
     this.requestLog.push({ uri, date: now });
     return false;
   }
+
+  clear(): void {
+    this.requestLog = [];
+  }
 }
 
 const rateLimiter = new RateLimiter(1_000, 8);
@@ -99,6 +103,11 @@ export function destroySession(): void {
     _session.abort();
     _session = null;
   }
+}
+
+export function destroy(): void {
+  destroySession();
+  rateLimiter.clear();
 }
 
 export async function getJSON(
