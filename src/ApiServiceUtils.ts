@@ -36,10 +36,10 @@ function classifyError(originalError: Error): string {
   // Malformed response
   if (msg.includes('JSON') || msg.includes('parse')) return ERROR_MESSAGES.INVALID_PAIR;
 
-  // Unknown - include original message if available
+  // Unknown - include full original message for debugging
   if (msg) {
-    const cleanMsg = msg.substring(0, 60);
-    return `${ERROR_MESSAGES.UNKNOWN_ERROR} (${cleanMsg})`;
+    // Include full error message so user can see what went wrong
+    return `${ERROR_MESSAGES.UNKNOWN_ERROR} - ${msg}`;
   }
 
   return ERROR_MESSAGES.UNKNOWN_ERROR;
