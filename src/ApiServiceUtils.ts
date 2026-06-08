@@ -6,6 +6,7 @@ export const ERROR_MESSAGES = {
   NETWORK_ERROR: 'Unable to connect to exchange. Check your internet connection.',
   RATE_LIMITED: 'Exchange rate limit exceeded. Data will update automatically.',
   INVALID_PAIR: 'This trading pair is not supported by this exchange. Try a different pair in Settings.',
+  INVALID_RESPONSE: 'Exchange returned invalid data. The API response format may have changed.',
   PROVIDER_DISABLED: 'Provider is temporarily disabled due to repeated failures.',
   NOT_FOUND: 'Exchange endpoint not found. This pair may not be supported.',
   SERVER_ERROR: 'Exchange server error (5xx). Their service may be temporarily unavailable.',
@@ -34,7 +35,7 @@ function classifyError(originalError: Error): string {
   if (msg.includes('fetch') || msg.includes('Connection')) return ERROR_MESSAGES.NETWORK_ERROR;
 
   // Malformed response
-  if (msg.includes('JSON') || msg.includes('parse')) return ERROR_MESSAGES.INVALID_PAIR;
+  if (msg.includes('JSON') || msg.includes('parse')) return ERROR_MESSAGES.INVALID_RESPONSE;
 
   // Unknown - include full original message for debugging
   if (msg) {
@@ -45,10 +46,11 @@ function classifyError(originalError: Error): string {
   return ERROR_MESSAGES.UNKNOWN_ERROR;
 }
 
-function formatContext(context?: { provider?: { apiName: string }; ticker?: { base: string; quote: string } }): string {
-  if (!context?.provider && !context?.ticker) return '';
+function formatContext(context?: { url?: string; provider?: { apiName: string }; ticker?: { base: string; quote: string } }): string {
+  if (!context?.url && !context?.provider && !context?.ticker) return '';
 
   const parts: string[] = [];
+  if (context.url) parts.push(`URL: ${context.url}`);
   if (context.provider) parts.push(`Provider: ${context.provider.apiName}`);
   if (context.ticker) parts.push(`Pair: ${context.ticker.base}/${context.ticker.quote}`);
 
