@@ -12,7 +12,7 @@ export class ConfigModel {
   private attributes: Record<string, unknown>;
 
   constructor(private listStore: Gtk.ListStore, private iter: Gtk.TreeIter, private column = 1) {
-    this.attributes = JSON.parse(this.listStore.get_value(iter, this.column));
+    this.attributes = JSON.parse(this.listStore.get_value(iter, this.column) as string);
   }
 
   set(key: string, value: any) {

@@ -134,7 +134,7 @@ export async function getJSON(
     // @ts-ignore
     const string = new TextDecoder().decode(data);
     return JSON.parse(string);
-  } catch (e) {
+  } catch {
     throw new HTTPError('json parse error', message);
   }
 }

@@ -94,7 +94,7 @@ class MarketIndicatorView extends PanelMenu.Button {
       hover: false,
       can_focus: false,
     }) as PopupMenuItemWithLabel;
-    this._popupItemStatus.label.set_style('max-width: 12em;');
+    (this._popupItemStatus.label as any).set_style('max-width: 12em;');
     (this._popupItemStatus.label as any).clutter_text.set_line_wrap(true);
     (this.menu as PopupMenu.PopupMenu).addMenuItem(this._popupItemStatus);
 

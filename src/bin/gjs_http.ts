@@ -1,5 +1,5 @@
 import { getJSON, isErrTooManyRequests } from '../HTTP';
-import { GLib } from '@girs/glib-2.0';
+import GLib from '@girs/glib-2.0';
 
 const ipify = 'https://api.ipify.org?format=json';
 const urlRequestBin = 'http://dnsdatacheck.9v35tg8lfoefh5f2.b.requestbin.net';
