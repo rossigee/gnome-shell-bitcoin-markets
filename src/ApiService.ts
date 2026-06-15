@@ -359,6 +359,18 @@ export function setSubscribers(subscribers: Subscriber[]) {
   _pollLoops.forEach((loop) => loop.setSubscribers(subscribers));
 }
 
+export function clearPermanentError(provider: BaseProvider.Api): void {
+  const cleared = permanentErrors.delete(provider);
+  const timeoutId = permanentErrorTimeouts.get(provider);
+  if (timeoutId) {
+    timeoutRemove(timeoutId);
+    permanentErrorTimeouts.delete(provider);
+  }
+  if (cleared) {
+    console.log(`Manually cleared permanent error for provider ${provider.apiName}`);
+  }
+}
+
 export function destroy() {
   _pollLoops.forEach((loop) => loop.destroy());
 

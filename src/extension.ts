@@ -66,7 +66,9 @@ class MarketIndicatorView extends PanelMenu.Button {
   _indicatorView!: St.Label;
   _statusView!: St.Label;
   _popupItemStatus!: PopupMenuItemWithLabel;
+  _popupItemRetry?: PopupMenu.PopupMenuItem;
   _popupItemSettings!: PopupMenu.PopupMenuItem;
+  _currentError?: Error | null;
 
   // actor!: Clutter.Actor;
 
@@ -93,9 +95,28 @@ class MarketIndicatorView extends PanelMenu.Button {
   }
 
   _clearError() {
+    this._currentError = null;
     this._displayStatus(_Symbols.refresh);
     this._setTooltip(null);
     this._updatePopupItemLabel();
+    this._updateRetryButton();
+  }
+
+  _updateRetryButton(): void {
+    if (!this._popupItemRetry || !this.options) {
+      return;
+    }
+    const isPermanentError = this._currentError?.message?.includes('temporarily disabled');
+    this._popupItemRetry.visible = isPermanentError ?? false;
+  }
+
+  _handleRetry(): void {
+    if (!this.options) {
+      return;
+    }
+    const provider = getProvider(this.options.api);
+    ApiService.clearPermanentError(provider);
+    this._clearError();
   }
 
   destroy(): void {
@@ -129,6 +150,12 @@ class MarketIndicatorView extends PanelMenu.Button {
     this._popupItemStatus.label.clutter_text.set_line_wrap(true);
     (this.menu as PopupMenu.PopupMenu).addMenuItem(this._popupItemStatus);
 
+    this._popupItemRetry = new PopupMenu.PopupMenuItem('Retry');
+    (this.menu as PopupMenu.PopupMenu).addMenuItem(this._popupItemRetry);
+    this._popupItemRetry.connect('activate', () => {
+      this._handleRetry();
+    });
+
     (this.menu as PopupMenu.PopupMenu).addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
 
     this._popupItemSettings = new PopupMenu.PopupMenuItem('Settings');
@@ -140,6 +167,8 @@ class MarketIndicatorView extends PanelMenu.Button {
         console.error('Failed to open preferences:', err);
       });
     });
+
+    this._updateRetryButton();
   }
 
   getChange(lastValue, newValue) {
@@ -159,10 +188,12 @@ class MarketIndicatorView extends PanelMenu.Button {
   }
 
   onUpdateError(error) {
+    this._currentError = error;
     this._displayText('error');
     this._displayStatus(_Symbols.error);
     this._updatePopupItemLabel(error);
     this._setTooltip(error);
+    this._updateRetryButton();
   }
 
   onClearValue() {
