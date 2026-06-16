@@ -76,7 +76,12 @@ export abstract class Api {
   }
 
   parseData(data, ticker: Ticker): number {
-    return Number(this.getLast(data, ticker));
+    const value = this.getLast(data, ticker);
+    const numValue = Number(value);
+    if (!isFinite(numValue)) {
+      throw new Error(`invalid price value: expected number, got ${typeof value}`);
+    }
+    return numValue;
   }
 
   getDefaultTicker(): Ticker {

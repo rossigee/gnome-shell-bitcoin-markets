@@ -359,6 +359,10 @@ export function setSubscribers(subscribers: Subscriber[]) {
   _pollLoops.forEach((loop) => loop.setSubscribers(subscribers));
 }
 
+export function hasPermanentError(provider: BaseProvider.Api): boolean {
+  return permanentErrors.has(provider);
+}
+
 export function clearPermanentError(provider: BaseProvider.Api): void {
   const cleared = permanentErrors.delete(provider);
   const timeoutId = permanentErrorTimeouts.get(provider);

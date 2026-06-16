@@ -106,8 +106,8 @@ class MarketIndicatorView extends PanelMenu.Button {
     if (!this._popupItemRetry || !this.options) {
       return;
     }
-    const isPermanentError = this._currentError?.message?.includes('temporarily disabled');
-    this._popupItemRetry.visible = isPermanentError ?? false;
+    const provider = getProvider(this.options.api);
+    this._popupItemRetry.visible = ApiService.hasPermanentError(provider);
   }
 
   _handleRetry(): void {
