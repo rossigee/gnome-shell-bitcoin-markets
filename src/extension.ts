@@ -223,7 +223,7 @@ class MarketIndicatorView extends PanelMenu.Button {
 
   private _setTooltip(error?: Error | null) {
     const tooltipText = !error ? '' : (error instanceof Error ? error.message : String(error));
-    (this as any).set_tooltip_text(tooltipText);
+    this.actor.set_tooltip_text(tooltipText);
   }
 
   _displayStatus(text) {
