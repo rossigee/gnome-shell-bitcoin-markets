@@ -222,8 +222,9 @@ class MarketIndicatorView extends PanelMenu.Button {
   }
 
   private _setTooltip(error?: Error | null) {
-    const tooltipText = !error ? '' : (error instanceof Error ? error.message : String(error));
-    this.actor.set_tooltip_text(tooltipText);
+    if (error && error.message) {
+      // set_tooltip_text was removed in GNOME Shell 50; tooltips are no-op
+    }
   }
 
   _displayStatus(text) {
