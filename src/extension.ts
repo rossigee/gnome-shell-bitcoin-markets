@@ -70,7 +70,7 @@ class MarketIndicatorView extends PanelMenu.Button {
   _popupItemSettings!: PopupMenu.PopupMenuItem;
   _currentError?: Error | null;
 
-  // actor!: Clutter.Actor;
+  actor!: Clutter.Actor;
 
   constructor(private ext: ExtensionBase, options) {
     super(1.0, 'Bitcoin Markets Indicator', false);
@@ -222,8 +222,11 @@ class MarketIndicatorView extends PanelMenu.Button {
   }
 
   private _setTooltip(error?: Error | null) {
+    if (!this.actor) {
+      return;
+    }
     const tooltipText = !error ? '' : (error instanceof Error ? error.message : String(error));
-    this.actor.set_tooltip_text(tooltipText);
+    (this.actor as Clutter.Actor & { set_tooltip_text: (text: string) => void }).set_tooltip_text(tooltipText);
   }
 
   _displayStatus(text) {
