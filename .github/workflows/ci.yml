@@ -10,32 +10,8 @@ on:
 
 jobs:
   test:
-    name: Test and Lint
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm install
-
-      - name: Run linter
-        run: make lint
-
-      - name: Run type checking
-        run: make check
-        continue-on-error: true # Type errors in prefs.ts are known
-
-      - name: Run tests
-        run: make test
-        env:
-          TS_NODE_PROJECT: ./tsconfig.test.json
+    name: Lint and Test
+    uses: ./.github/workflows/lint-and-test.yml
 
   build:
     name: Build Extension
@@ -89,7 +65,7 @@ jobs:
           name: extension-build
 
       - name: Upload Release Assets
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v3.0.3
         with:
           files: |
             gnome-shell-bitcoin-markets.zip
