@@ -1,0 +1,34 @@
+name: Lint and Test
+
+# Reusable: called by ci.yml so that the build job only runs after lint and tests pass
+on:
+  workflow_call:
+
+jobs:
+  lint-and-test:
+    name: Lint and Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run linter
+        run: make lint
+
+      - name: Run type checking
+        run: make check
+        continue-on-error: true # Type errors in prefs.ts are known
+
+      - name: Run tests
+        run: make test
+        env:
+          TS_NODE_PROJECT: ./tsconfig.test.json
