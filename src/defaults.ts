@@ -1,5 +1,5 @@
 export const Defaults = {
-  api: 'bitstamp',
+  api: 'binance',
   base: 'BTC',
   quote: 'USD',
   attribute: 'last',

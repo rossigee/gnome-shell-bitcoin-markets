@@ -17,6 +17,6 @@ export class Api extends BaseProvider.Api {
   }
 
   getDefaultTicker(): BaseProvider.Ticker {
-    return DefaultTickers.BTC_USDT;
+    return DefaultTickers.BTC_USD;
   }
 }
